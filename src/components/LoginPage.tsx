@@ -1,4 +1,5 @@
-import { Lock, LogIn, Mail, ShieldCheck, UserPlus } from 'lucide-react';
+cat > /home/claude/nursawy_final/src/components/LoginPage.tsx << 'EOF'
+import { Lock, LogIn, Mail, ShieldCheck, User, UserPlus } from 'lucide-react';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,6 +10,7 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   const { login, register } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         await login(email, password);
         onSuccess();
       } else {
-        const { needsEmailConfirmation } = await register(email, password);
+        if (!fullName.trim()) {
+          setError('من فضلك اكتب اسمك');
+          setLoading(false);
+          return;
+        }
+        const { needsEmailConfirmation } = await register(email, password, fullName.trim());
         if (needsEmailConfirmation) {
           setInfo('تم إنشاء الحساب! افتح بريدك الإلكتروني وأكّد الحساب، بعدين سجّل الدخول.');
           setMode('login');
@@ -80,6 +87,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'register' && (
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1.5">الاسم</label>
+              <div className="relative">
+                <User className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 pr-9 pl-3 text-sm focus:outline-none focus:border-purple-500/60"
+                  placeholder="اسمك اللي هيظهر في الموقع"
+                />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-bold text-slate-300 mb-1.5">البريد الإلكتروني</label>
             <div className="relative">
@@ -138,3 +162,5 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     </div>
   );
 };
+EOF
+echo "الملف اتحفظ"
