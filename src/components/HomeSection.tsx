@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sparkles, Video, Calculator, AlertTriangle, BookOpen, FileText, Bot, ArrowLeft, Activity, ShieldAlert } from 'lucide-react';
 import { EditableText } from './EditableText';
+import { useAuth } from '../context/AuthContext';
 
 interface HomeSectionProps {
   onNavigate: (tab: string) => void;
@@ -8,6 +9,8 @@ interface HomeSectionProps {
 }
 
 export const HomeSection: React.FC<HomeSectionProps> = ({ onNavigate, overallProgress }) => {
+  const { isLoggedIn, fullName, email } = useAuth();
+  const displayName = fullName || email;
   return (
     <div className="space-y-8 dir-rtl">
       
@@ -23,11 +26,17 @@ export const HomeSection: React.FC<HomeSectionProps> = ({ onNavigate, overallPro
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-extrabold text-white leading-tight">
-              <EditableText
-                contentKey="home.heroTitle"
-                defaultValue="أهلاً بك يا موو في لوحة التحكم الإكلينيكية الذكية"
-                as="span"
-              />
+              {isLoggedIn ? (
+                <span>
+                  أهلاً بك يا <span className="text-cyan-300">{displayName}</span> في لوحة التحكم الإكلينيكية الذكية
+                </span>
+              ) : (
+                <EditableText
+                  contentKey="home.heroTitle"
+                  defaultValue="أهلاً بك في لوحة التحكم الإكلينيكية الذكية"
+                  as="span"
+                />
+              )}
             </h1>
 
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
