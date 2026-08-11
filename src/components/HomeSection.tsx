@@ -28,12 +28,12 @@ export const HomeSection: React.FC<HomeSectionProps> = ({ onNavigate, overallPro
             <h1 className="text-2xl sm:text-4xl font-extrabold text-white leading-tight">
               {isLoggedIn ? (
                 <span>
-                  أهلاً بك يا <span className="text-cyan-300">{displayName}</span> في لوحة التحكم الإكلينيكية الذكية
+                  أهلاً بك يا <span className="text-cyan-300">{displayName}</span> في Nursawy
                 </span>
               ) : (
                 <EditableText
                   contentKey="home.heroTitle"
-                  defaultValue="أهلاً بك في لوحة التحكم الإكلينيكية الذكية"
+                  defaultValue="أهلاً بك في Nursawy"
                   as="span"
                 />
               )}
