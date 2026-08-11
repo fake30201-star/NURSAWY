@@ -1,4 +1,3 @@
-cat > /home/claude/nursawy_final/src/components/LoginPage.tsx << 'EOF'
 import { Lock, LogIn, Mail, ShieldCheck, User, UserPlus } from 'lucide-react';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -162,5 +161,3 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     </div>
   );
 };
-EOF
-echo "الملف اتحفظ"
