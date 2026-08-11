@@ -15,3 +15,20 @@
 body {
   font-family: 'Tajawal', sans-serif;
 }
+
+/* تأثير نبض (Heartbeat) لكلمة Nursawy */
+@keyframes nursawy-pulse {
+  0%, 100% {
+    transform: scale(1);
+    text-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
+  }
+  50% {
+    transform: scale(1.06);
+    text-shadow: 0 0 20px rgba(34, 211, 238, 0.9), 0 0 8px rgba(168, 85, 247, 0.6);
+  }
+}
+
+.animate-nursawy-pulse {
+  display: inline-block;
+  animation: nursawy-pulse 1.6s ease-in-out infinite;
+}
