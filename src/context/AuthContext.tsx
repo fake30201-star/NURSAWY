@@ -1,4 +1,3 @@
-cat > /home/claude/nursawy_final/src/context/AuthContext.tsx << 'EOF'
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
@@ -134,5 +133,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth لازم يتستخدم جوه AuthProvider');
   return ctx;
 }
-EOF
-echo "الملف اتحفظ"
