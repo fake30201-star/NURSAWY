@@ -1,0 +1,6 @@
+{
+  "name": "Nursawy",
+  "description": "منصة التمريض الإكلينيكي المتقدمة والمساعد الطبي الذكي للتطوير والتشخيص السريري",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
