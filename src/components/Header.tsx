@@ -1,4 +1,4 @@
-mport React from 'react';
+import React from 'react';
 import { Activity, Stethoscope, Sparkles, Moon, Sun, ShieldCheck, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
