@@ -1,4 +1,4 @@
-import React from 'react';
+mport React from 'react';
 import { Activity, Stethoscope, Sparkles, Moon, Sun, ShieldCheck, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,7 +15,7 @@ export const Header: React.FC<HeaderProps> = ({
   darkMode,
   setDarkMode,
 }) => {
-  const { isLoggedIn, logout, email, isAdmin } = useAuth();
+  const { isLoggedIn, logout, email, isAdmin, fullName } = useAuth();
   const navItems = [
     { id: 'home', label: 'الرئيسية' },
     { id: 'dictionary', label: 'القاموس والذكاء الاصطناعي 🩺' },
@@ -94,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
           {isLoggedIn && (
             <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-xs font-bold">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span dir="ltr">{email}{isAdmin ? ' (أدمن)' : ''}</span>
+              <span>{fullName || email}{isAdmin ? ' (أدمن)' : ''}</span>
             </div>
           )}
 
