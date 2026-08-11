@@ -28,7 +28,10 @@ export const HomeSection: React.FC<HomeSectionProps> = ({ onNavigate, overallPro
             <h1 className="text-2xl sm:text-4xl font-extrabold text-white leading-tight">
               {isLoggedIn ? (
                 <span>
-                  أهلاً بك يا <span className="text-cyan-300">{displayName}</span> في Nursawy
+                  أهلاً بك يا <span className="text-cyan-300">{displayName}</span> في{' '}
+                  <span className="animate-nursawy-pulse bg-gradient-to-r from-cyan-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                    Nursawy
+                  </span>
                 </span>
               ) : (
                 <EditableText
