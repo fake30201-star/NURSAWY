@@ -11,6 +11,8 @@ import { ClinicalCaseSimulator } from './components/ClinicalCaseSimulator';
 import { AdminDashboard } from './components/AdminDashboard';
 import { MyProgressSection } from './components/MyProgressSection';
 import { RemindersSection } from './components/RemindersSection';
+import { ContactSection } from './components/ContactSection';
+import { AnnouncementBanner } from './components/AnnouncementBanner';
 import { EditableText } from './components/EditableText';
 import { OSCE_SKILLS } from './data/clinicalData';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -166,6 +168,9 @@ function AppShell() {
         setDarkMode={setDarkMode}
       />
 
+      {/* Announcements Banner */}
+      <AnnouncementBanner />
+
       {/* Main Content Area */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'home' && (
@@ -193,6 +198,8 @@ function AppShell() {
         {activeTab === 'my-progress' && <MyProgressSection />}
 
         {activeTab === 'reminders' && <RemindersSection />}
+
+        {activeTab === 'contact' && <ContactSection />}
 
         {activeTab === 'admin' && <AdminDashboard />}
 
