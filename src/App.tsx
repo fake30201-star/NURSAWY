@@ -14,6 +14,7 @@ import { RemindersSection } from './components/RemindersSection';
 import { ContactSection } from './components/ContactSection';
 import { AnnouncementBanner } from './components/AnnouncementBanner';
 import { EditableText } from './components/EditableText';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { OSCE_SKILLS } from './data/clinicalData';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SiteContentProvider } from './context/SiteContentContext';
@@ -161,49 +162,97 @@ function AppShell() {
       </div>
 
       {/* Main Header */}
-      <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-      />
+      <ErrorBoundary sectionName="الهيدر">
+        <Header
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+        />
+      </ErrorBoundary>
 
       {/* Announcements Banner */}
-      <AnnouncementBanner />
+      <ErrorBoundary sectionName="التنبيهات">
+        <AnnouncementBanner />
+      </ErrorBoundary>
 
       {/* Main Content Area */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'home' && (
-          <HomeSection onNavigate={setActiveTab} overallProgress={overallProgress} />
+          <ErrorBoundary sectionName="الرئيسية">
+            <HomeSection onNavigate={setActiveTab} overallProgress={overallProgress} />
+          </ErrorBoundary>
         )}
 
-        {activeTab === 'dictionary' && <AiDictionarySection />}
+        {activeTab === 'dictionary' && (
+          <ErrorBoundary sectionName="القاموس والذكاء الاصطناعي">
+            <AiDictionarySection />
+          </ErrorBoundary>
+        )}
 
         {activeTab === 'skills' && (
-          <OsceSkillsSection
-            completedStepsMap={completedStepsMap}
-            onToggleStep={handleToggleStep}
-            onResetSkill={handleResetSkill}
-          />
+          <ErrorBoundary sectionName="مهارات OSCE">
+            <OsceSkillsSection
+              completedStepsMap={completedStepsMap}
+              onToggleStep={handleToggleStep}
+              onResetSkill={handleResetSkill}
+            />
+          </ErrorBoundary>
         )}
 
-        {activeTab === 'calculator' && <DripCalculatorSection />}
+        {activeTab === 'calculator' && (
+          <ErrorBoundary sectionName="حاسبة المحاليل">
+            <DripCalculatorSection />
+          </ErrorBoundary>
+        )}
 
-        {activeTab === 'emergency' && <EmergencySection />}
+        {activeTab === 'emergency' && (
+          <ErrorBoundary sectionName="الطوارئ">
+            <EmergencySection />
+          </ErrorBoundary>
+        )}
 
-        {activeTab === 'handover' && <HandoverSection />}
+        {activeTab === 'handover' && (
+          <ErrorBoundary sectionName="المناوبات SBAR">
+            <HandoverSection />
+          </ErrorBoundary>
+        )}
 
-        {activeTab === 'case-sim' && <ClinicalCaseSimulator />}
+        {activeTab === 'case-sim' && (
+          <ErrorBoundary sectionName="محاكي الحالات">
+            <ClinicalCaseSimulator />
+          </ErrorBoundary>
+        )}
 
-        {activeTab === 'my-progress' && <MyProgressSection />}
+        {activeTab === 'reminders' && (
+          <ErrorBoundary sectionName="التذكيرات">
+            <RemindersSection />
+          </ErrorBoundary>
+        )}
 
-        {activeTab === 'reminders' && <RemindersSection />}
+        {activeTab === 'contact' && (
+          <ErrorBoundary sectionName="تواصل معنا">
+            <ContactSection />
+          </ErrorBoundary>
+        )}
 
-        {activeTab === 'contact' && <ContactSection />}
+        {activeTab === 'admin' && (
+          <ErrorBoundary sectionName="لوحة التحكم">
+            <AdminDashboard />
+          </ErrorBoundary>
+        )}
 
-        {activeTab === 'admin' && <AdminDashboard />}
+        {activeTab === 'login' && (
+          <ErrorBoundary sectionName="تسجيل الدخول">
+            <LoginPage onSuccess={() => setActiveTab('home')} />
+          </ErrorBoundary>
+        )}
 
-        {activeTab === 'login' && <LoginPage onSuccess={() => setActiveTab('home')} />}
+        {activeTab === 'my-progress' && (
+          <ErrorBoundary sectionName="تقدمي">
+            <MyProgressSection />
+          </ErrorBoundary>
+        )}
       </main>
 
       {/* Footer */}
