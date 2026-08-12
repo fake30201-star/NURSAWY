@@ -151,6 +151,45 @@ function AppShell() {
     });
   };
 
+  // بوابة الدخول الإجبارية: لسه بيتحقق من الجلسة، نعرض شاشة تحميل بسيطة بدل ما نفلاش صفحة الدخول غلط.
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-3 text-slate-400">
+          <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm">جارِ التحقق من حسابك...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // المستخدم لازم يسجل دخول قبل ما يشوف أي محتوى في الموقع خالص.
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans dir-rtl">
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+          <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] animate-pulse" />
+          <div className="absolute bottom-1/3 left-1/4 w-[500px] h-[500px] bg-cyan-600/10 rounded-full blur-[120px] animate-pulse" />
+        </div>
+        <header className="relative z-10 flex items-center justify-center gap-3 py-8">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] shadow-lg shadow-purple-500/30">
+            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-cyan-400 font-black text-lg">
+              N
+            </div>
+          </div>
+          <span className="font-extrabold text-2xl tracking-tight bg-gradient-to-r from-white via-purple-200 to-cyan-300 bg-clip-text text-transparent">
+            Nursawy
+          </span>
+        </header>
+        <main className="relative z-10 px-4 pb-12">
+          <ErrorBoundary sectionName="تسجيل الدخول">
+            <LoginPage onSuccess={() => setActiveTab('home')} />
+          </ErrorBoundary>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen transition-colors duration-300 font-sans ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       
@@ -239,12 +278,6 @@ function AppShell() {
         {activeTab === 'admin' && (
           <ErrorBoundary sectionName="لوحة التحكم">
             <AdminDashboard />
-          </ErrorBoundary>
-        )}
-
-        {activeTab === 'login' && (
-          <ErrorBoundary sectionName="تسجيل الدخول">
-            <LoginPage onSuccess={() => setActiveTab('home')} />
           </ErrorBoundary>
         )}
 
