@@ -4,7 +4,6 @@ import { Video, CheckCircle2, RotateCcw, Sparkles, Loader2, Award, Lightbulb, Ch
 import { askPuterAI } from '../lib/puterAi';
 
 // يحول أي رابط يوتيوب عادي (youtu.be، watch?v=، shorts/) لصيغة embed قابلة للعرض جوه iframe.
-// كده تقدر تلصق أي رابط يوتيوب عادي (اللي بتنسخه من زرار Share) في videoUrl مباشرة.
 function toEmbedUrl(url: string): string | null {
   if (!url) return null;
   try {
@@ -16,7 +15,7 @@ function toEmbedUrl(url: string): string | null {
     } else if (u.pathname.startsWith('/shorts/')) {
       videoId = u.pathname.replace('/shorts/', '');
     } else if (u.pathname.startsWith('/embed/')) {
-      return url; // already an embed link
+      return url;
     } else if (u.searchParams.get('v')) {
       videoId = u.searchParams.get('v') || '';
     }
@@ -43,6 +42,8 @@ export const OsceSkillsSection: React.FC<OsceSkillsSectionProps> = ({
   const [selectedSkillId, setSelectedSkillId] = useState<string>(OSCE_SKILLS[0].id);
   const [aiAdvice, setAiAdvice] = useState<string | null>(null);
   const [evalLoading, setEvalLoading] = useState(false);
+  // بيتحكم في حركة الانتقال بين المهارات (إحساس سكرول/كاروسيل بدل القفز المفاجئ)
+  const [slideState, setSlideState] = useState<'idle' | 'out-right' | 'out-left' | 'in-right' | 'in-left'>('idle');
 
   const activeSkill = OSCE_SKILLS.find((s) => s.id === selectedSkillId) || OSCE_SKILLS[0];
   const skillStepsState = completedStepsMap[activeSkill.id] || new Array(activeSkill.steps.length).fill(false);
@@ -52,19 +53,43 @@ export const OsceSkillsSection: React.FC<OsceSkillsSectionProps> = ({
   const prevSkill = OSCE_SKILLS[(activeIndex - 1 + OSCE_SKILLS.length) % OSCE_SKILLS.length];
   const nextSkill = OSCE_SKILLS[(activeIndex + 1) % OSCE_SKILLS.length];
 
-  const goToSkill = (skillId: string) => {
-    setSelectedSkillId(skillId);
-    setAiAdvice(null);
-  };
-
   const completedCount = skillStepsState.filter(Boolean).length;
   const totalSteps = activeSkill.steps.length;
-  const progressPercent = Math.round((completedCount / totalSteps) * 100);
+  const skillProgressPercent = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
 
-  const handleAiEvaluation = async () => {
-    setEvalLoading(true);
+  // التنقل بين المهارات بحركة سكرول سلسة (السهم اللي بيدوس عليه بيحدد اتجاه الحركة)
+  const navigateToSkill = (targetId: string, direction: 'next' | 'prev') => {
+    if (slideState !== 'idle') return; // يمنع الضغط المتكرر أثناء الحركة
     setAiAdvice(null);
 
+    setSlideState(direction === 'next' ? 'out-left' : 'out-right');
+
+    setTimeout(() => {
+      setSelectedSkillId(targetId);
+      setSlideState(direction === 'next' ? 'in-right' : 'in-left');
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setSlideState('idle');
+        });
+      });
+    }, 180);
+  };
+
+  const slideClass =
+    slideState === 'out-right'
+      ? 'opacity-0 translate-x-6'
+      : slideState === 'out-left'
+      ? 'opacity-0 -translate-x-6'
+      : slideState === 'in-right'
+      ? 'opacity-0 translate-x-6'
+      : slideState === 'in-left'
+      ? 'opacity-0 -translate-x-6'
+      : 'opacity-100 translate-x-0';
+
+  const handleEvaluate = async () => {
+    setEvalLoading(true);
+    setAiAdvice(null);
     try {
       const completedStepsList = activeSkill.steps.filter((_, idx) => skillStepsState[idx]);
       const systemPrompt = 'أنت مقيم إكلينيكي واختبارات OSCE للتمريض، قدم ملاحظات بناءة ونصائح دقيقة للتعقيم وتفادي العدوى.';
@@ -78,235 +103,158 @@ export const OsceSkillsSection: React.FC<OsceSkillsSectionProps> = ({
       setAiAdvice(advice);
     } catch (err: any) {
       console.error(err);
-      setAiAdvice('حدث خطأ أثناء التواصل مع محاكي التقييم الإكلينيكي.');
+      alert(err.message || 'حدث خطأ أثناء تقييم المهارة بالذكاء الاصطناعي.');
     } finally {
       setEvalLoading(false);
     }
   };
 
   return (
-    <div className="space-y-8 dir-rtl">
-      {/* Title */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-purple-400 font-bold text-sm">
-          <Video className="w-5 h-5" />
-          <span>محاكاة وتدريب مهارات الـ OSCE التمريضية</span>
+    <div className="dir-rtl space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shrink-0">
+          <Award className="w-6 h-6 text-white" />
         </div>
-        <h2 className="text-2xl sm:text-3xl font-black text-white">
-          مهارات الـ OSCE وقوائم التدقيق التفاعلية
-        </h2>
-        <p className="text-slate-400 text-sm">
-          اتبع خطوات كل مهارة عملياً، حدد الخطوات المكتملة، واحصل على تقييم إكلينيكي مباشر من الذكاء الاصطناعي.
-        </p>
+        <div>
+          <h2 className="text-xl font-extrabold text-white">مهارات OSCE التفاعلية</h2>
+          <p className="text-xs text-slate-400">قوائم تدقيق رسمية معتمدة مع فيديو توضيحي وترجمة لكل خطوة</p>
+        </div>
       </div>
 
-      {/* Skill Selector Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800 no-scrollbar">
-        {OSCE_SKILLS.map((skill) => {
-          const isSelected = skill.id === activeSkill.id;
-          const skillState = completedStepsMap[skill.id] || [];
-          const skillCompletedCount = skillState.filter(Boolean).length;
-
-          return (
-            <button
-              key={skill.id}
-              onClick={() => {
-                setSelectedSkillId(skill.id);
-                setAiAdvice(null);
-              }}
-              className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-                isSelected
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30 scale-102'
-                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
-              }`}
-            >
-              <span>{skill.title}</span>
-              {skillCompletedCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  {skillCompletedCount}/{skill.steps.length}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Prev / Next Skill Navigation */}
-      <div className="flex items-center justify-between gap-3">
+      {/* Navigation */}
+      <div className="flex items-center justify-between bg-slate-900 border border-purple-500/20 rounded-2xl px-4 py-3">
         <button
-          onClick={() => goToSkill(prevSkill.id)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:border-purple-500/40 hover:text-white text-xs sm:text-sm font-bold transition-all cursor-pointer"
+          onClick={() => navigateToSkill(prevSkill.id, 'prev')}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold cursor-pointer transition-all"
         >
           <ChevronRight className="w-4 h-4" />
-          <span className="truncate max-w-[140px] sm:max-w-none">السابقة: {prevSkill.title}</span>
+          <span className="hidden sm:inline">السابقة</span>
         </button>
 
-        <span className="text-[11px] text-slate-500 font-bold whitespace-nowrap">
+        <span className="text-xs font-bold text-slate-400">
           {activeIndex + 1} / {OSCE_SKILLS.length}
         </span>
 
         <button
-          onClick={() => goToSkill(nextSkill.id)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:border-purple-500/40 hover:text-white text-xs sm:text-sm font-bold transition-all cursor-pointer"
+          onClick={() => navigateToSkill(nextSkill.id, 'next')}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold cursor-pointer transition-all"
         >
-          <span className="truncate max-w-[140px] sm:max-w-none">التالية: {nextSkill.title}</span>
+          <span className="hidden sm:inline">التالية</span>
           <ChevronLeft className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Skill Detail Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Left Video / Description Column */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="rounded-3xl bg-slate-900 border border-purple-500/20 overflow-hidden shadow-xl shadow-purple-950/20 space-y-4">
-            <div className="relative aspect-video bg-black">
-              {!embedUrl ? (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-center px-6 bg-slate-950">
-                  <Video className="w-8 h-8 text-purple-400/60" />
-                  <p className="text-slate-400 text-xs sm:text-sm font-bold">
-                    لم تتم إضافة رابط الفيديو بعد
-                  </p>
-                  <p className="text-slate-600 text-[11px]">
-                    ألصق رابط يوتيوب عادي (Share) في videoUrl الخاص بـ "{activeSkill.id}" داخل clinicalData.ts
-                  </p>
-                </div>
-              ) : (
-                <iframe
-                  src={embedUrl}
-                  title={activeSkill.title}
-                  className="w-full h-full border-0"
-                  allowFullScreen
-                />
-              )}
-            </div>
-
-            <div className="p-5 space-y-2">
-              <span className="inline-block px-3 py-1 rounded-lg text-xs font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                {activeSkill.category}
-              </span>
-              <h3 className="text-xl font-black text-white">{activeSkill.title}</h3>
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                {activeSkill.description}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Checklist Column */}
-        <div className="lg:col-span-7 bg-slate-900/90 border border-purple-500/20 rounded-3xl p-6 space-y-6 shadow-xl shadow-purple-950/20">
-          
-          {/* Header */}
-          <div className="flex items-center justify-between gap-4 border-b border-slate-800 pb-4">
-            <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                <span>قائمة التدقيق لمهمة الـ OSCE</span>
-              </h3>
-              <p className="text-xs text-slate-400">قم بتحديد الخطوات التي نفذتها بالترتيب الدقيق.</p>
-            </div>
-
-            <span className="px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-              {completedCount} / {totalSteps} خطوة ({progressPercent}%)
-            </span>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="space-y-1">
-            <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
-              <div
-                className="bg-gradient-to-r from-purple-500 via-cyan-400 to-emerald-400 h-full transition-all duration-300"
-                style={{ width: `${progressPercent}%` }}
+      {/* Skill Content (with slide transition) */}
+      <div className={`transition-all duration-200 ease-out ${slideClass}`}>
+        <div className="bg-slate-900 border border-purple-500/20 rounded-3xl overflow-hidden">
+          {/* Video */}
+          <div className="aspect-video bg-slate-950 relative">
+            {!embedUrl ? (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-center px-6 bg-slate-950">
+                <Video className="w-8 h-8 text-purple-400/60" />
+                <p className="text-slate-400 text-xs sm:text-sm font-bold">
+                  لم تتم إضافة رابط الفيديو بعد
+                </p>
+                <p className="text-slate-600 text-[11px]">
+                  ألصق رابط يوتيوب عادي (Share) في videoUrl الخاص بـ "{activeSkill.id}" داخل clinicalData.ts
+                </p>
+              </div>
+            ) : (
+              <iframe
+                src={embedUrl}
+                title={activeSkill.title}
+                className="w-full h-full border-0"
+                allowFullScreen
               />
+            )}
+          </div>
+
+          <div className="p-5 space-y-2">
+            <span className="inline-block px-3 py-1 rounded-lg text-xs font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20">
+              {activeSkill.category}
+            </span>
+            <h3 className="text-lg sm:text-xl font-extrabold text-white">{activeSkill.title}</h3>
+            <p className="text-sm text-slate-400">{activeSkill.description}</p>
+
+            {/* Progress bar */}
+            <div className="pt-2">
+              <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+                <span>التقدم في المهارة</span>
+                <span className="font-bold text-emerald-400">{skillProgressPercent}%</span>
+              </div>
+              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full transition-all"
+                  style={{ width: `${skillProgressPercent}%` }}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Step List */}
-          <div className="space-y-3">
+          {/* Checklist */}
+          <div className="border-t border-purple-500/10 p-5 space-y-2.5">
             {activeSkill.steps.map((stepText, idx) => {
-              const isChecked = skillStepsState[idx] || false;
+              const isChecked = skillStepsState[idx];
+              const parts = stepText.split('||');
+              const original = parts[0];
+              const translation = parts[1];
               return (
                 <label
                   key={idx}
-                  className={`flex items-start gap-3 p-4 rounded-2xl border transition-all cursor-pointer ${
+                  className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                     isChecked
-                      ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-100 shadow-sm'
-                      : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-purple-500/40'
+                      ? 'bg-emerald-950/30 border-emerald-500/30'
+                      : 'bg-slate-950/50 border-slate-800 hover:border-purple-500/30'
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={isChecked}
                     onChange={() => onToggleStep(activeSkill.id, idx)}
-                    className="mt-1 w-5 h-5 accent-emerald-500 rounded cursor-pointer shrink-0"
+                    className="mt-1 w-4 h-4 accent-emerald-500 cursor-pointer shrink-0"
                   />
                   <span className={`flex-1 ${isChecked ? 'opacity-80' : ''}`}>
-                    {(() => {
-                      const parts = stepText.split('||');
-                      const original = parts[0];
-                      const translation = parts[1];
-                      return (
-                        <>
-                          <span className={`block text-sm leading-relaxed font-medium ${isChecked ? 'line-through' : ''}`}>
-                            {original}
-                          </span>
-                          {translation && (
-                            <span className="block text-xs leading-relaxed font-normal text-cyan-300/80 mt-1">
-                              {translation}
-                            </span>
-                          )}
-                        </>
-                      );
-                    })()}
+                    <span className={`block text-sm leading-relaxed font-medium ${isChecked ? 'line-through' : ''}`}>
+                      {original}
+                    </span>
+                    {translation && (
+                      <span className="block text-xs leading-relaxed font-normal text-cyan-300/80 mt-1">
+                        {translation}
+                      </span>
+                    )}
                   </span>
                 </label>
               );
             })}
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800">
+          {/* Actions */}
+          <div className="border-t border-purple-500/10 p-5 flex flex-col sm:flex-row items-center gap-3">
+            <button
+              onClick={handleEvaluate}
+              disabled={evalLoading || completedCount === 0}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 text-white font-bold text-sm cursor-pointer disabled:opacity-50 transition-all"
+            >
+              {evalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              تقييم أدائي بالذكاء الاصطناعي
+            </button>
             <button
               onClick={() => onResetSkill(activeSkill.id)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 text-xs font-bold transition-all cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm cursor-pointer transition-all"
             >
-              <RotateCcw className="w-4 h-4" />
-              <span>إعادة ضبط المهارة</span>
-            </button>
-
-            <button
-              onClick={handleAiEvaluation}
-              disabled={evalLoading}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-purple-600/30 transition-all cursor-pointer"
-            >
-              {evalLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>جاري التقييم...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 text-cyan-200" />
-                  <span>تقييم المهارة بالذكاء الاصطناعي 🤖</span>
-                </>
-              )}
+              <RotateCcw className="w-4 h-4" /> إعادة تعيين
             </button>
           </div>
 
-          {/* AI Feedback Box */}
           {aiAdvice && (
-            <div className="p-5 rounded-2xl bg-purple-950/40 border border-purple-500/40 space-y-3 text-purple-100 text-sm animate-in fade-in duration-300">
-              <div className="flex items-center gap-2 font-black text-cyan-300">
-                <Award className="w-5 h-5 text-cyan-400" />
-                <span>تقييم المحاكاة وتوجيه المقيم الإكلينيكي:</span>
+            <div className="border-t border-purple-500/10 p-5">
+              <div className="bg-purple-950/40 p-4 rounded-2xl border border-purple-500/40 flex gap-3">
+                <Lightbulb className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-slate-200 leading-relaxed">{aiAdvice}</p>
               </div>
-              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-line">
-                {aiAdvice}
-              </p>
             </div>
           )}
         </div>
-
       </div>
     </div>
   );
