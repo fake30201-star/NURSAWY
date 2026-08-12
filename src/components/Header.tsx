@@ -25,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'handover', label: 'المناوبات SBAR 📝' },
     { id: 'case-sim', label: 'محاكي الحالات 🎓' },
     ...(isLoggedIn ? [{ id: 'reminders', label: 'التذكيرات 🔔' }] : []),
+    ...(isLoggedIn ? [{ id: 'contact', label: 'تواصل معنا 💬' }] : []),
     ...(isAdmin ? [{ id: 'admin', label: 'لوحة التحكم 👑' }] : []),
   ];
 
