@@ -112,10 +112,11 @@ export const RemindersSection: React.FC = () => {
             <label className="block text-xs font-bold text-slate-300 mb-1.5">التاريخ والوقت</label>
             <input
               type="datetime-local"
+              dir="ltr"
               required
               value={remindAt}
               onChange={(e) => setRemindAt(e.target.value)}
-              className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 px-3 text-sm focus:outline-none focus:border-purple-500/60"
+              className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 px-3 text-sm focus:outline-none focus:border-purple-500/60 text-right"
             />
           </div>
         </div>
