@@ -28,8 +28,8 @@ export const RemindersSection: React.FC = () => {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // خانة تاريخ ووقت مبنية بالكامل بقوائم اختيار (Select) بدل الخانة الجاهزة من المتصفح،
-  // عشان نتحكم في شكل النص المعروض بالكامل ونتفادى مشاكل عرض اللغة حسب نظام تشغيل الجهاز.
+  // خانة تاريخ ووقت مبنية بالكامل بقوائم اختيار (Select) عشان نتحكم في شكل النص المعروض
+  // بالكامل ونتفادى مشاكل عرض اللغة حسب نظام تشغيل الجهاز. الدقيقة دلوقتي بدقة كاملة (0-59).
   const currentYear = new Date().getFullYear();
   const [day, setDay] = useState(new Date().getDate());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
@@ -154,11 +154,12 @@ export const RemindersSection: React.FC = () => {
             </select>
             <span className="text-slate-500">:</span>
             <select value={minute} onChange={(e) => setMinute(Number(e.target.value))} className={selectClass}>
-              {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+              {Array.from({ length: 60 }, (_, i) => i).map((m) => (
                 <option key={m} value={m}>{pad2(m)}</option>
               ))}
             </select>
           </div>
+          <p className="text-[11px] text-slate-500 mt-1.5">حدد الدقيقة بالضبط للمعاد المطلوب.</p>
         </div>
 
         <div>
