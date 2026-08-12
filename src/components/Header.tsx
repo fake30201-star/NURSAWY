@@ -50,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
               {/* رابط شارة "تصميم M for MADA" — غيّر href هنا لأي رابط تحب توديه (حسابك، بورتفوليو...) */}
               <a
-                href="https://protofile-sepia..app/"
+                href="https://protofile-sepia.vercel.app/"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
