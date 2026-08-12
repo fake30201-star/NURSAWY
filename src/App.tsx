@@ -8,6 +8,9 @@ import { DripCalculatorSection } from './components/DripCalculatorSection';
 import { EmergencySection } from './components/EmergencySection';
 import { HandoverSection } from './components/HandoverSection';
 import { ClinicalCaseSimulator } from './components/ClinicalCaseSimulator';
+import { AdminDashboard } from './components/AdminDashboard';
+import { MyProgressSection } from './components/MyProgressSection';
+import { RemindersSection } from './components/RemindersSection';
 import { EditableText } from './components/EditableText';
 import { OSCE_SKILLS } from './data/clinicalData';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -186,6 +189,12 @@ function AppShell() {
         {activeTab === 'handover' && <HandoverSection />}
 
         {activeTab === 'case-sim' && <ClinicalCaseSimulator />}
+
+        {activeTab === 'my-progress' && <MyProgressSection />}
+
+        {activeTab === 'reminders' && <RemindersSection />}
+
+        {activeTab === 'admin' && <AdminDashboard />}
 
         {activeTab === 'login' && <LoginPage onSuccess={() => setActiveTab('home')} />}
       </main>
