@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { LoginPage } from './components/LoginPage';
 import { HomeSection } from './components/HomeSection';
@@ -10,10 +10,20 @@ import { HandoverSection } from './components/HandoverSection';
 import { ClinicalCaseSimulator } from './components/ClinicalCaseSimulator';
 import { EditableText } from './components/EditableText';
 import { OSCE_SKILLS } from './data/clinicalData';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { SiteContentProvider } from './context/SiteContentContext';
+import { supabase } from './lib/supabaseClient';
+
+function buildEmptyProgress(): Record<string, boolean[]> {
+  const initial: Record<string, boolean[]> = {};
+  OSCE_SKILLS.forEach((skill) => {
+    initial[skill.id] = new Array(skill.steps.length).fill(false);
+  });
+  return initial;
+}
 
 function AppShell() {
+  const { user, isLoggedIn, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('home');
   const [darkMode, setDarkMode] = useState<boolean>(true);
 
@@ -25,15 +35,63 @@ function AppShell() {
     } catch (e) {
       console.error(e);
     }
-    // Default initial empty state
-    const initial: Record<string, boolean[]> = {};
-    OSCE_SKILLS.forEach((skill) => {
-      initial[skill.id] = new Array(skill.steps.length).fill(false);
-    });
-    return initial;
+    return buildEmptyProgress();
   });
 
-  // Save OSCE progress to localStorage
+  // بيمنع إن أول تحميل للتقدم من Supabase يترفع تاني فورًا كـ "حفظ" لنفس البيانات
+  const skipNextRemoteWrite = useRef(false);
+  const progressLoadedForUser = useRef<string | null>(null);
+
+  // لو المستخدم مسجل دخوله: نجيب تقدمه المحفوظ من Supabase، أو نرفع تقدمه المحلي أول مرة لو حسابه جديد
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!isLoggedIn || !user) {
+      progressLoadedForUser.current = null;
+      return;
+    }
+
+    if (progressLoadedForUser.current === user.id) return; // متعملش تحميل تاني لنفس المستخدم
+    progressLoadedForUser.current = user.id;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from('osce_progress')
+        .select('skill_id, completed_steps')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('تعذر تحميل تقدم OSCE من الحساب:', error.message);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        // فيه تقدم محفوظ في الحساب بالفعل: نستخدمه هو
+        const remoteMap: Record<string, boolean[]> = buildEmptyProgress();
+        for (const row of data) {
+          remoteMap[row.skill_id] = row.completed_steps as boolean[];
+        }
+        skipNextRemoteWrite.current = true;
+        setCompletedStepsMap(remoteMap);
+      } else {
+        // حساب جديد مفيهوش تقدم محفوظ لسه: نرفع أي تقدم محلي موجود على الجهاز ده كبداية لحسابه
+        const rows = Object.entries(completedStepsMap)
+          .filter(([, steps]) => steps.some(Boolean))
+          .map(([skill_id, completed_steps]) => ({
+            user_id: user.id,
+            skill_id,
+            completed_steps,
+            updated_at: new Date().toISOString(),
+          }));
+        if (rows.length > 0) {
+          await supabase.from('osce_progress').upsert(rows);
+        }
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, user?.id, authLoading]);
+
+  // حفظ التقدم محليًا دايمًا (نسخة احتياطية سريعة، وتشتغل حتى للزوار الغير مسجلين)
   useEffect(() => {
     try {
       localStorage.setItem('nursawy_osce_progress', JSON.stringify(completedStepsMap));
@@ -52,10 +110,27 @@ function AppShell() {
   });
   const overallProgress = totalGlobalSteps > 0 ? Math.round((totalGlobalCompleted / totalGlobalSteps) * 100) : 0;
 
+  // بيحفظ تعديل مهارة واحدة في حساب المستخدم على Supabase (لو مسجل دخوله)
+  const persistSkillProgress = async (skillId: string, steps: boolean[]) => {
+    if (skipNextRemoteWrite.current) {
+      skipNextRemoteWrite.current = false;
+      return;
+    }
+    if (!isLoggedIn || !user) return;
+    const { error } = await supabase.from('osce_progress').upsert({
+      user_id: user.id,
+      skill_id: skillId,
+      completed_steps: steps,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) console.error('تعذر حفظ تقدم المهارة في الحساب:', error.message);
+  };
+
   const handleToggleStep = (skillId: string, stepIndex: number) => {
     setCompletedStepsMap((prev) => {
       const skillSteps = prev[skillId] ? [...prev[skillId]] : new Array(5).fill(false);
       skillSteps[stepIndex] = !skillSteps[stepIndex];
+      persistSkillProgress(skillId, skillSteps);
       return { ...prev, [skillId]: skillSteps };
     });
   };
@@ -64,7 +139,9 @@ function AppShell() {
     setCompletedStepsMap((prev) => {
       const skill = OSCE_SKILLS.find((s) => s.id === skillId);
       const count = skill ? skill.steps.length : 5;
-      return { ...prev, [skillId]: new Array(count).fill(false) };
+      const resetSteps = new Array(count).fill(false);
+      persistSkillProgress(skillId, resetSteps);
+      return { ...prev, [skillId]: resetSteps };
     });
   };
 
