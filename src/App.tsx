@@ -8,6 +8,7 @@ import { DripCalculatorSection } from './components/DripCalculatorSection';
 import { EmergencySection } from './components/EmergencySection';
 import { HandoverSection } from './components/HandoverSection';
 import { ClinicalCaseSimulator } from './components/ClinicalCaseSimulator';
+import { EditableText } from './components/EditableText';
 import { OSCE_SKILLS } from './data/clinicalData';
 import { AuthProvider } from './context/AuthContext';
 import { SiteContentProvider } from './context/SiteContentContext';
@@ -115,10 +116,22 @@ function AppShell() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-purple-500/10 py-6 text-center text-xs text-slate-500 dir-rtl">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© 2026 Nursawy - منصة التمريض الإكلينيكي والتشخيص السريري بالذكاء الاصطناعي</p>
+          <EditableText
+            contentKey="footer.copyright"
+            defaultValue="© 2026 Nursawy - منصة التمريض الإكلينيكي والتشخيص السريري بالذكاء الاصطناعي"
+            as="p"
+          />
           <div className="flex items-center gap-4 text-slate-400">
-            <span>إشراف وتطوير إكلينيكي: موو ⚡</span>
-            <span>مدعوم بالذكاء الاصطناعي</span>
+            <EditableText
+              contentKey="footer.supervision"
+              defaultValue="إشراف وتطوير إكلينيكي: محمد ⚡"
+              as="span"
+            />
+            <EditableText
+              contentKey="footer.poweredBy"
+              defaultValue="مدعوم بالذكاء الاصطناعي"
+              as="span"
+            />
           </div>
         </div>
       </footer>
