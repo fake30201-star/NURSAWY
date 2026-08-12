@@ -11,15 +11,31 @@ interface Reminder {
   is_done: boolean;
 }
 
+const ARABIC_MONTHS = [
+  'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+];
+
+function pad2(n: number) {
+  return String(n).padStart(2, '0');
+}
+
 export const RemindersSection: React.FC = () => {
   const { user } = useAuth();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
-  const [reminderDate, setReminderDate] = useState('');
-  const [reminderTime, setReminderTime] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // خانة تاريخ ووقت مبنية بالكامل بقوائم اختيار (Select) بدل الخانة الجاهزة من المتصفح،
+  // عشان نتحكم في شكل النص المعروض بالكامل ونتفادى مشاكل عرض اللغة حسب نظام تشغيل الجهاز.
+  const currentYear = new Date().getFullYear();
+  const [day, setDay] = useState(new Date().getDate());
+  const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [year, setYear] = useState(currentYear);
+  const [hour, setHour] = useState(9);
+  const [minute, setMinute] = useState(0);
 
   const loadReminders = async () => {
     if (!user) return;
@@ -37,23 +53,26 @@ export const RemindersSection: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  const daysInMonth = new Date(year, month, 0).getDate();
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !title.trim() || !reminderDate || !reminderTime) return;
+    if (!user || !title.trim()) return;
     setSaving(true);
+
+    const isoString = `${year}-${pad2(month)}-${pad2(Math.min(day, daysInMonth))}T${pad2(hour)}:${pad2(minute)}:00`;
+
     const { error } = await supabase.from('reminders').insert({
       user_id: user.id,
       title: title.trim(),
       note: note.trim() || null,
-      remind_at: new Date(`${reminderDate}T${reminderTime}`).toISOString(),
+      remind_at: new Date(isoString).toISOString(),
     });
     if (error) {
       alert('حصل خطأ: ' + error.message);
     } else {
       setTitle('');
       setNote('');
-      setReminderDate('');
-      setReminderTime('');
       await loadReminders();
     }
     setSaving(false);
@@ -72,14 +91,13 @@ export const RemindersSection: React.FC = () => {
   const now = new Date();
   const isOverdue = (dateStr: string, done: boolean) => !done && new Date(dateStr) < now;
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleString('ar-EG', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return `${pad2(d.getDate())} ${ARABIC_MONTHS[d.getMonth()]} ${d.getFullYear()} - ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  };
+
+  const selectClass =
+    'rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 px-2 text-sm focus:outline-none focus:border-purple-500/60 cursor-pointer';
 
   return (
     <div className="dir-rtl space-y-6">
@@ -96,43 +114,53 @@ export const RemindersSection: React.FC = () => {
       {/* Add reminder form */}
       <form
         onSubmit={handleAdd}
-        className="bg-slate-900 border border-purple-500/20 rounded-2xl p-5 space-y-3"
+        className="bg-slate-900 border border-purple-500/20 rounded-2xl p-5 space-y-4"
       >
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1.5">العنوان</label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="مثال: مناوبة صباحية"
-              className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 px-3 text-sm focus:outline-none focus:border-purple-500/60"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1.5">التاريخ</label>
-            <input
-              type="date"
-              dir="ltr"
-              required
-              value={reminderDate}
-              onChange={(e) => setReminderDate(e.target.value)}
-              className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 px-3 text-sm focus:outline-none focus:border-purple-500/60"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1.5">الوقت</label>
-            <input
-              type="time"
-              dir="ltr"
-              required
-              value={reminderTime}
-              onChange={(e) => setReminderTime(e.target.value)}
-              className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 px-3 text-sm focus:outline-none focus:border-purple-500/60"
-            />
+        <div>
+          <label className="block text-xs font-bold text-slate-300 mb-1.5">العنوان</label>
+          <input
+            type="text"
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="مثال: مناوبة صباحية"
+            className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 px-3 text-sm focus:outline-none focus:border-purple-500/60"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-slate-300 mb-1.5">التاريخ والوقت</label>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={day} onChange={(e) => setDay(Number(e.target.value))} className={selectClass}>
+              {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+            <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className={selectClass}>
+              {ARABIC_MONTHS.map((m, i) => (
+                <option key={m} value={i + 1}>{m}</option>
+              ))}
+            </select>
+            <select value={year} onChange={(e) => setYear(Number(e.target.value))} className={selectClass}>
+              {[currentYear, currentYear + 1, currentYear + 2].map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            <span className="text-slate-500 text-xs px-1">الساعة</span>
+            <select value={hour} onChange={(e) => setHour(Number(e.target.value))} className={selectClass}>
+              {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                <option key={h} value={h}>{pad2(h)}</option>
+              ))}
+            </select>
+            <span className="text-slate-500">:</span>
+            <select value={minute} onChange={(e) => setMinute(Number(e.target.value))} className={selectClass}>
+              {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+                <option key={m} value={m}>{pad2(m)}</option>
+              ))}
+            </select>
           </div>
         </div>
+
         <div>
           <label className="block text-xs font-bold text-slate-300 mb-1.5">ملاحظة (اختياري)</label>
           <input
@@ -143,6 +171,7 @@ export const RemindersSection: React.FC = () => {
             className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 px-3 text-sm focus:outline-none focus:border-purple-500/60"
           />
         </div>
+
         <button
           type="submit"
           disabled={saving}
