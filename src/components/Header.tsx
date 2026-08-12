@@ -95,10 +95,14 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {isLoggedIn && (
-            <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-xs font-bold">
+            <button
+              onClick={() => setActiveTab('my-progress')}
+              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all"
+              title="اعرض تقدمك الشخصي"
+            >
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>{fullName || email}{isAdmin ? ' (أدمن)' : ''}</span>
-            </div>
+            </button>
           )}
 
           {isLoggedIn ? (
