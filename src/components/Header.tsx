@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Stethoscope, Sparkles, Moon, Sun, ShieldCheck, LogIn, LogOut } from 'lucide-react';
+import { Activity, Stethoscope, Sparkles, Moon, Sun, ShieldCheck, LogIn, LogOut, Crown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
@@ -24,6 +24,9 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'emergency', label: 'طوارئ ⚡' },
     { id: 'handover', label: 'المناوبات SBAR 📝' },
     { id: 'case-sim', label: 'محاكي الحالات 🎓' },
+    ...(isLoggedIn ? [{ id: 'my-progress', label: 'تقدمي 📊' }] : []),
+    ...(isLoggedIn ? [{ id: 'reminders', label: 'التذكيرات 🔔' }] : []),
+    ...(isAdmin ? [{ id: 'admin', label: 'لوحة التحكم 👑' }] : []),
   ];
 
   return (
@@ -47,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
               {/* رابط شارة "تصميم M for MADA" — غيّر href هنا لأي رابط تحب توديه (حسابك، بورتفوليو...) */}
               <a
-                href="https://protofile-orcin.vercel.app/"
+                href="https://example.com/m-for-mada"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
