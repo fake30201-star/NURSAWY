@@ -17,7 +17,8 @@ export const RemindersSection: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
-  const [remindAt, setRemindAt] = useState('');
+  const [reminderDate, setReminderDate] = useState('');
+  const [reminderTime, setReminderTime] = useState('');
   const [saving, setSaving] = useState(false);
 
   const loadReminders = async () => {
@@ -38,20 +39,21 @@ export const RemindersSection: React.FC = () => {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !title.trim() || !remindAt) return;
+    if (!user || !title.trim() || !reminderDate || !reminderTime) return;
     setSaving(true);
     const { error } = await supabase.from('reminders').insert({
       user_id: user.id,
       title: title.trim(),
       note: note.trim() || null,
-      remind_at: new Date(remindAt).toISOString(),
+      remind_at: new Date(`${reminderDate}T${reminderTime}`).toISOString(),
     });
     if (error) {
       alert('حصل خطأ: ' + error.message);
     } else {
       setTitle('');
       setNote('');
-      setRemindAt('');
+      setReminderDate('');
+      setReminderTime('');
       await loadReminders();
     }
     setSaving(false);
@@ -96,7 +98,7 @@ export const RemindersSection: React.FC = () => {
         onSubmit={handleAdd}
         className="bg-slate-900 border border-purple-500/20 rounded-2xl p-5 space-y-3"
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-bold text-slate-300 mb-1.5">العنوان</label>
             <input
@@ -109,14 +111,25 @@ export const RemindersSection: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1.5">التاريخ والوقت</label>
+            <label className="block text-xs font-bold text-slate-300 mb-1.5">التاريخ</label>
             <input
-              type="datetime-local"
+              type="date"
               dir="ltr"
               required
-              value={remindAt}
-              onChange={(e) => setRemindAt(e.target.value)}
-              className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 px-3 text-sm focus:outline-none focus:border-purple-500/60 text-right"
+              value={reminderDate}
+              onChange={(e) => setReminderDate(e.target.value)}
+              className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 px-3 text-sm focus:outline-none focus:border-purple-500/60"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1.5">الوقت</label>
+            <input
+              type="time"
+              dir="ltr"
+              required
+              value={reminderTime}
+              onChange={(e) => setReminderTime(e.target.value)}
+              className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 px-3 text-sm focus:outline-none focus:border-purple-500/60"
             />
           </div>
         </div>
