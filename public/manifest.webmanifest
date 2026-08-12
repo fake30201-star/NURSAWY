@@ -1,0 +1,27 @@
+{
+  "name": "Nursawy | منصة التمريض الإكلينيكي المتقدم",
+  "short_name": "Nursawy",
+  "description": "منصة تمريضية ذكية بالذكاء الاصطناعي: قاموس طبي فوري، مهارات OSCE تفاعلية، حاسبة محاليل وريدية، تقارير SBAR، ومحاكي حالات إكلينيكية.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#020617",
+  "theme_color": "#7c3aed",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
