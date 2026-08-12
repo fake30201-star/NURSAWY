@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Stethoscope, Sparkles, Moon, Sun, ShieldCheck, LogIn, LogOut, Crown } from 'lucide-react';
+import { Activity, Stethoscope, Sparkles, Moon, Sun, ShieldCheck, LogOut, Crown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
@@ -50,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
               {/* رابط شارة "تصميم M for MADA" — غيّر href هنا لأي رابط تحب توديه (حسابك، بورتفوليو...) */}
               <a
-                href="https://protofile-sepia.vercel.app/"
+                href="https://example.com/m-for-mada"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
@@ -97,15 +97,15 @@ export const Header: React.FC<HeaderProps> = ({
           {isLoggedIn && (
             <button
               onClick={() => setActiveTab('my-progress')}
-              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all"
+              className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-[11px] sm:text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all max-w-[110px] sm:max-w-none"
               title="اعرض تقدمك الشخصي"
             >
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>{fullName || email}{isAdmin ? ' (أدمن)' : ''}</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="truncate">{fullName || email}{isAdmin ? ' (أدمن)' : ''}</span>
             </button>
           )}
 
-          {isLoggedIn ? (
+          {isLoggedIn && (
             <button
               onClick={logout}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-all text-xs font-bold cursor-pointer"
@@ -113,15 +113,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden md:inline">خروج</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setActiveTab('login')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-purple-500/20 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-all text-xs font-bold cursor-pointer"
-              title="تسجيل الدخول"
-            >
-              <LogIn className="w-4 h-4" />
-              <span className="hidden md:inline">دخول</span>
             </button>
           )}
         </div>
