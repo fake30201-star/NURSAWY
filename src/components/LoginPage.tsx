@@ -1,4 +1,4 @@
-import { CheckCircle2, Eye, EyeOff, Lock, LogIn, Mail, ShieldCheck, User, UserPlus } from 'lucide-react';
+import { CheckCircle2, Eye, EyeOff, Lock, LogIn, Mail, MapPin, Phone, ShieldCheck, Stethoscope, Store, User, UserPlus } from 'lucide-react';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
@@ -10,6 +10,7 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   const { login, register } = useAuth();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const [accountRole, setAccountRole] = useState<'nurse' | 'pharmacy'>('nurse');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +18,34 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // بيانات إضافية لحساب الصيدلية
+  const [pharmacyName, setPharmacyName] = useState('');
+  const [pharmacyPhone, setPharmacyPhone] = useState('');
+  const [pharmacyAddress, setPharmacyAddress] = useState('');
+  const [pharmacyLat, setPharmacyLat] = useState<number | null>(null);
+  const [pharmacyLng, setPharmacyLng] = useState<number | null>(null);
+  const [locatingPharmacy, setLocatingPharmacy] = useState(false);
+
+  const handleDetectPharmacyLocation = () => {
+    if (!navigator.geolocation) {
+      setError('المتصفح ده مش بيدعم تحديد الموقع');
+      return;
+    }
+    setLocatingPharmacy(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPharmacyLat(pos.coords.latitude);
+        setPharmacyLng(pos.coords.longitude);
+        setLocatingPharmacy(false);
+      },
+      () => {
+        setError('تعذر تحديد موقعك، تأكد من تفعيل صلاحية الموقع للمتصفح');
+        setLocatingPharmacy(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const resetMessages = () => {
     setError(null);
@@ -37,7 +66,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           setLoading(false);
           return;
         }
-        const { needsEmailConfirmation } = await register(email, password, fullName.trim());
+        if (accountRole === 'pharmacy') {
+          if (!pharmacyName.trim() || !pharmacyPhone.trim() || !pharmacyAddress.trim()) {
+            setError('من فضلك اكمل بيانات الصيدلية: الاسم، الرقم، والموقع');
+            setLoading(false);
+            return;
+          }
+        }
+        const { needsEmailConfirmation } = await register(
+          email,
+          password,
+          fullName.trim(),
+          accountRole,
+          accountRole === 'pharmacy'
+            ? {
+                pharmacy_name: pharmacyName.trim(),
+                pharmacy_phone: pharmacyPhone.trim(),
+                pharmacy_address: pharmacyAddress.trim(),
+                pharmacy_lat: pharmacyLat,
+                pharmacy_lng: pharmacyLng,
+              }
+            : undefined
+        );
         if (needsEmailConfirmation) {
           setInfo('تم إنشاء الحساب! افتح بريدك الإلكتروني وأكّد الحساب، بعدين سجّل الدخول.');
           setMode('login');
@@ -115,20 +165,113 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'register' && (
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1.5">الاسم</label>
-              <div className="relative">
-                <User className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 pr-9 pl-3 text-sm focus:outline-none focus:border-purple-500/60"
-                  placeholder="اسمك اللي هيظهر في الموقع"
-                />
+            <>
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">نوع الحساب</label>
+                <div className="flex items-center bg-slate-950 rounded-xl p-1 border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setAccountRole('nurse')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      accountRole === 'nurse' ? 'bg-purple-600 text-white' : 'text-slate-400'
+                    }`}
+                  >
+                    <Stethoscope className="w-3.5 h-3.5" />
+                    ممرض / ممرضة
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAccountRole('pharmacy')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      accountRole === 'pharmacy' ? 'bg-emerald-600 text-white' : 'text-slate-400'
+                    }`}
+                  >
+                    <Store className="w-3.5 h-3.5" />
+                    صيدلية
+                  </button>
+                </div>
               </div>
-            </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  {accountRole === 'pharmacy' ? 'اسم المسؤول' : 'الاسم'}
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full rounded-xl bg-slate-950 border border-purple-500/20 text-slate-100 py-2.5 pr-9 pl-3 text-sm focus:outline-none focus:border-purple-500/60"
+                    placeholder="اسمك اللي هيظهر في الموقع"
+                  />
+                </div>
+              </div>
+
+              {accountRole === 'pharmacy' && (
+                <div className="space-y-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">اسم الصيدلية</label>
+                    <div className="relative">
+                      <Store className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        required
+                        value={pharmacyName}
+                        onChange={(e) => setPharmacyName(e.target.value)}
+                        className="w-full rounded-xl bg-slate-950 border border-emerald-500/20 text-slate-100 py-2.5 pr-9 pl-3 text-sm focus:outline-none focus:border-emerald-500/60"
+                        placeholder="مثال: صيدلية النور"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">رقم تليفون الصيدلية</label>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="tel"
+                        required
+                        value={pharmacyPhone}
+                        onChange={(e) => setPharmacyPhone(e.target.value)}
+                        dir="ltr"
+                        className="w-full rounded-xl bg-slate-950 border border-emerald-500/20 text-slate-100 py-2.5 pr-9 pl-3 text-sm focus:outline-none focus:border-emerald-500/60 text-left"
+                        placeholder="01xxxxxxxxx"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">لوكيشن الصيدلية (العنوان)</label>
+                    <div className="relative">
+                      <MapPin className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        required
+                        value={pharmacyAddress}
+                        onChange={(e) => setPharmacyAddress(e.target.value)}
+                        className="w-full rounded-xl bg-slate-950 border border-emerald-500/20 text-slate-100 py-2.5 pr-9 pl-3 text-sm focus:outline-none focus:border-emerald-500/60"
+                        placeholder="العنوان بالتفصيل (الحي، الشارع، علامة مميزة)"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDetectPharmacyLocation}
+                      disabled={locatingPharmacy}
+                      className="mt-2 w-full flex items-center justify-center gap-1.5 text-[11px] font-bold text-emerald-300 border border-emerald-500/30 rounded-lg py-2 hover:bg-emerald-500/10 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      {locatingPharmacy
+                        ? 'جارِ تحديد الموقع...'
+                        : pharmacyLat
+                        ? 'تم تحديد إحداثيات الصيدلية ✓ (اضغط لإعادة التحديد)'
+                        : 'تحديد موقعي الحالي على الخريطة'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <div>
