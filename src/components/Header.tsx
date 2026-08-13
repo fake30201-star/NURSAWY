@@ -33,10 +33,10 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-purple-500/20 shadow-lg shadow-purple-950/30 transition-all dir-rtl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         
-        {/* Brand (Logo, Title, and M for MADA badge) - Back to the right side */}
+        {/* Brand (Logo, Title, and M for MADA badge) - Right side */}
         <div 
           onClick={() => setActiveTab('home')}
-          className="flex items-center gap-3 cursor-pointer group select-none"
+          className="flex items-center gap-3 cursor-pointer group select-none shrink-0"
         >
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] shadow-lg shadow-purple-500/30 group-hover:scale-105 transition-transform">
             <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-cyan-400">
@@ -83,8 +83,8 @@ export const Header: React.FC<HeaderProps> = ({
           })}
         </nav>
 
-        {/* Right Actions / Left Side on screen (Dark Mode, Logout, Profile Name) */}
-        <div className="flex items-center gap-3">
+        {/* Left Actions (Dark Mode & Logout on top, Name under them vertically) */}
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setDarkMode(!darkMode)}
@@ -109,10 +109,10 @@ export const Header: React.FC<HeaderProps> = ({
           {isLoggedIn && (
             <button
               onClick={() => setActiveTab('my-progress')}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all max-w-[160px] sm:max-w-none"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all max-w-[150px] sm:max-w-[180px]"
               title="اعرض تقدمك الشخصي"
             >
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <span className="truncate">{fullName || email}{isAdmin ? ' (أدمن)' : ''}</span>
             </button>
           )}
