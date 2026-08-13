@@ -33,7 +33,57 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-purple-500/20 shadow-lg shadow-purple-950/30 transition-all dir-rtl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         
-        {/* Right Actions (Group: Logout, DarkMode, Profile Name moved to the right side where the arrow points) */}
+        {/* Brand (Logo, Title, and M for MADA badge) - Back to the right side */}
+        <div 
+          onClick={() => setActiveTab('home')}
+          className="flex items-center gap-3 cursor-pointer group select-none"
+        >
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] shadow-lg shadow-purple-500/30 group-hover:scale-105 transition-transform">
+            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-cyan-400">
+              <Stethoscope className="w-6 h-6 animate-pulse" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-2xl tracking-tight bg-gradient-to-r from-white via-purple-200 to-cyan-300 bg-clip-text text-transparent">
+                Nursawy
+              </span>
+              <a
+                href="https://example.com/m-for-mada"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm hover:bg-purple-500/30 transition-colors cursor-pointer"
+              >
+                <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                تصميم M for MADA
+              </a>
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium">منصة التمريض الإكلينيكي المتقدم</p>
+          </div>
+        </div>
+
+        {/* Navigation Tabs (Desktop) */}
+        <nav className="hidden lg:flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-2xl border border-purple-500/20 shadow-inner">
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/30 scale-105'
+                    : 'text-slate-300 hover:text-white hover:bg-purple-500/10'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Right Actions / Left Side on screen (Dark Mode, Logout, Profile Name) */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <button
@@ -66,56 +116,6 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="truncate">{fullName || email}{isAdmin ? ' (أدمن)' : ''}</span>
             </button>
           )}
-        </div>
-
-        {/* Navigation Tabs (Desktop) */}
-        <nav className="hidden lg:flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-2xl border border-purple-500/20 shadow-inner">
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
-                  isActive
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/30 scale-105'
-                    : 'text-slate-300 hover:text-white hover:bg-purple-500/10'
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Brand */}
-        <div 
-          onClick={() => setActiveTab('home')}
-          className="flex items-center gap-3 cursor-pointer group select-none"
-        >
-          <div>
-            <div className="flex items-center justify-end gap-2">
-              <a
-                href="https://example.com/m-for-mada"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm hover:bg-purple-500/30 transition-colors cursor-pointer"
-              >
-                <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
-                تصميم M for MADA
-              </a>
-              <span className="font-extrabold text-2xl tracking-tight bg-gradient-to-r from-white via-purple-200 to-cyan-300 bg-clip-text text-transparent">
-                Nursawy
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 font-medium text-end">منصة التمريض الإكلينيكي المتقدم</p>
-          </div>
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] shadow-lg shadow-purple-500/30 group-hover:scale-105 transition-transform">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-cyan-400">
-              <Stethoscope className="w-6 h-6 animate-pulse" />
-            </div>
-          </div>
         </div>
       </div>
 
