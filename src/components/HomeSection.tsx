@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Video, Calculator, AlertTriangle, BookOpen, FileText, Bot, ArrowLeft, Activity, ShieldAlert } from 'lucide-react';
+import { Sparkles, Video, Calculator, AlertTriangle, BookOpen, FileText, Bot, ArrowLeft, Activity, ShieldAlert, Library, Pill } from 'lucide-react';
 import { EditableText } from './EditableText';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,7 +9,7 @@ interface HomeSectionProps {
 }
 
 export const HomeSection: React.FC<HomeSectionProps> = ({ onNavigate, overallProgress }) => {
-  const { isLoggedIn, fullName, email } = useAuth();
+  const { isLoggedIn, fullName, email, isPharmacy } = useAuth();
   const displayName = fullName || email;
   return (
     <div className="space-y-8 dir-rtl">
@@ -185,6 +185,39 @@ export const HomeSection: React.FC<HomeSectionProps> = ({ onNavigate, overallPro
           </p>
         </div>
 
+        <div
+          onClick={() => onNavigate('clinical-guides')}
+          className="group p-6 rounded-2xl bg-slate-900/90 border border-purple-500/20 hover:border-cyan-400/50 hover:bg-slate-850 hover:shadow-xl hover:shadow-cyan-950/30 transition-all cursor-pointer space-y-3"
+        >
+          <div className="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Library className="w-6 h-6" />
+          </div>
+          <h3 className="text-lg font-extrabold text-white group-hover:text-purple-300 transition-colors">
+            الأدلة السريرية المتقدمة 📚
+          </h3>
+          <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
+            تفاعلات الأدوية الحرجة، مفسر التحاليل، التجهيز للفحوصات، العزل ومكافحة العدوى، والتسمم والجرعات الزائدة.
+          </p>
+        </div>
+
+        {isLoggedIn && (
+          <div
+            onClick={() => onNavigate('pharmacy')}
+            className="group p-6 rounded-2xl bg-slate-900/90 border border-emerald-500/20 hover:border-emerald-400/50 hover:bg-slate-850 hover:shadow-xl hover:shadow-emerald-950/30 transition-all cursor-pointer space-y-3"
+          >
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Pill className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-extrabold text-white group-hover:text-emerald-300 transition-colors">
+              {isPharmacy ? 'لوحة تحكم الصيدلية 💊' : 'اطلب أدويتك من أقرب صيدلية 💊'}
+            </h3>
+            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
+              {isPharmacy
+                ? 'راجع الأوردرات الواردة، حدد الأسعار، وأسند التوصيل لمندوبينك من مكان واحد.'
+                : 'حدد موقعك، ابعت الروشتة لأقرب صيدليات، وقارن الأسعار قبل ما توافق وتتابع التوصيل لحظة بلحظة.'}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
