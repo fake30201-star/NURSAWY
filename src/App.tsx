@@ -8,6 +8,9 @@ import { DripCalculatorSection } from './components/DripCalculatorSection';
 import { EmergencySection } from './components/EmergencySection';
 import { HandoverSection } from './components/HandoverSection';
 import { ClinicalCaseSimulator } from './components/ClinicalCaseSimulator';
+import { ClinicalGuidesSection } from './components/ClinicalGuidesSection';
+import { PharmacySection } from './components/PharmacySection';
+import { PharmacyDashboard } from './components/PharmacyDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
 import { MyProgressSection } from './components/MyProgressSection';
 import { RemindersSection } from './components/RemindersSection';
@@ -29,7 +32,7 @@ function buildEmptyProgress(): Record<string, boolean[]> {
 }
 
 function AppShell() {
-  const { user, isLoggedIn, loading: authLoading } = useAuth();
+  const { user, isLoggedIn, loading: authLoading, isPharmacy } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('home');
   const [darkMode, setDarkMode] = useState<boolean>(true);
 
@@ -260,6 +263,18 @@ function AppShell() {
         {activeTab === 'case-sim' && (
           <ErrorBoundary sectionName="محاكي الحالات">
             <ClinicalCaseSimulator />
+          </ErrorBoundary>
+        )}
+
+        {activeTab === 'clinical-guides' && (
+          <ErrorBoundary sectionName="الأدلة السريرية">
+            <ClinicalGuidesSection />
+          </ErrorBoundary>
+        )}
+
+        {activeTab === 'pharmacy' && (
+          <ErrorBoundary sectionName="الصيدلية">
+            {isPharmacy ? <PharmacyDashboard /> : <PharmacySection />}
           </ErrorBoundary>
         )}
 
