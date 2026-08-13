@@ -15,7 +15,7 @@ export const Header: React.FC<HeaderProps> = ({
   darkMode,
   setDarkMode,
 }) => {
-  const { isLoggedIn, logout, email, isAdmin, fullName } = useAuth();
+  const { isLoggedIn, logout, email, isAdmin, fullName, isPharmacy } = useAuth();
   const navItems = [
     { id: 'home', label: 'الرئيسية' },
     { id: 'dictionary', label: 'القاموس والذكاء الاصطناعي 🩺' },
@@ -24,6 +24,10 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'emergency', label: 'طوارئ ⚡' },
     { id: 'handover', label: 'المناوبات SBAR 📝' },
     { id: 'case-sim', label: 'محاكي الحالات 🎓' },
+    { id: 'clinical-guides', label: 'الأدلة السريرية 📚' },
+    ...(isLoggedIn
+      ? [{ id: 'pharmacy', label: isPharmacy ? 'لوحة الصيدلية 💊' : 'اطلب من الصيدلية 💊' }]
+      : []),
     ...(isLoggedIn ? [{ id: 'reminders', label: 'التذكيرات 🔔' }] : []),
     ...(isLoggedIn ? [{ id: 'contact', label: 'تواصل معنا 💬' }] : []),
     ...(isAdmin ? [{ id: 'admin', label: 'لوحة التحكم 👑' }] : []),
