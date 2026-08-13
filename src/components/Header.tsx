@@ -31,40 +31,44 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-purple-500/20 shadow-lg shadow-purple-950/30 transition-all dir-rtl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-20 py-3 sm:py-0 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 sm:gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         
-        {/* Brand */}
-        <div 
-          onClick={() => setActiveTab('home')}
-          className="flex items-center gap-3 cursor-pointer group select-none"
-        >
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] shadow-lg shadow-purple-500/30 group-hover:scale-105 transition-transform">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-cyan-400">
-              <Stethoscope className="w-6 h-6 animate-pulse" />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-2xl tracking-tight bg-gradient-to-r from-white via-purple-200 to-cyan-300 bg-clip-text text-transparent">
-                Nursawy
-              </span>
-              {/* رابط شارة "تصميم M for MADA" — غيّر href هنا لأي رابط تحب توديه (حسابك، بورتفوليو...) */}
-              <a
-                href="https://example.com/m-for-mada"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm hover:bg-purple-500/30 transition-colors cursor-pointer"
+        {/* Right Actions (Group: Logout, DarkMode, Profile Name moved to the right side where the arrow points) */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2.5 rounded-xl bg-slate-900 border border-purple-500/20 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-all cursor-pointer"
+              title="تبديل المظهر"
+            >
+              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+
+            {isLoggedIn && (
+              <button
+                onClick={logout}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-900 border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-all text-xs font-bold cursor-pointer"
+                title="تسجيل الخروج"
               >
-                <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
-                تصميم M for MADA
-              </a>
-            </div>
-            <p className="text-[11px] text-slate-400 font-medium">منصة التمريض الإكلينيكي المتقدم</p>
+                <LogOut className="w-4 h-4" />
+                <span className="hidden md:inline">خروج</span>
+              </button>
+            )}
           </div>
+
+          {isLoggedIn && (
+            <button
+              onClick={() => setActiveTab('my-progress')}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all max-w-[160px] sm:max-w-none"
+              title="اعرض تقدمك الشخصي"
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="truncate">{fullName || email}{isAdmin ? ' (أدمن)' : ''}</span>
+            </button>
+          )}
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs (Desktop) */}
         <nav className="hidden lg:flex items-center gap-1 bg-slate-900/90 p-1.5 rounded-2xl border border-purple-500/20 shadow-inner">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
@@ -84,39 +88,34 @@ export const Header: React.FC<HeaderProps> = ({
           })}
         </nav>
 
-        {/* Right Actions */}
-        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <div className="flex items-center gap-2 sm:gap-3 order-1">
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2.5 rounded-xl bg-slate-900 border border-purple-500/20 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-all cursor-pointer"
-              title="تبديل المظهر"
-            >
-              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-
-            {isLoggedIn && (
-              <button
-                onClick={logout}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-all text-xs font-bold cursor-pointer"
-                title="تسجيل الخروج"
+        {/* Brand */}
+        <div 
+          onClick={() => setActiveTab('home')}
+          className="flex items-center gap-3 cursor-pointer group select-none"
+        >
+          <div>
+            <div className="flex items-center justify-end gap-2">
+              <a
+                href="https://example.com/m-for-mada"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm hover:bg-purple-500/30 transition-colors cursor-pointer"
               >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden md:inline">خروج</span>
-              </button>
-            )}
+                <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                تصميم M for MADA
+              </a>
+              <span className="font-extrabold text-2xl tracking-tight bg-gradient-to-r from-white via-purple-200 to-cyan-300 bg-clip-text text-transparent">
+                Nursawy
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium text-end">منصة التمريض الإكلينيكي المتقدم</p>
           </div>
-
-          {isLoggedIn && (
-            <button
-              onClick={() => setActiveTab('my-progress')}
-              className="order-2 flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-[11px] sm:text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all max-w-[160px] sm:max-w-none"
-              title="اعرض تقدمك الشخصي"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
-              <span className="truncate">{fullName || email}{isAdmin ? ' (أدمن)' : ''}</span>
-            </button>
-          )}
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] shadow-lg shadow-purple-500/30 group-hover:scale-105 transition-transform">
+            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-cyan-400">
+              <Stethoscope className="w-6 h-6 animate-pulse" />
+            </div>
+          </div>
         </div>
       </div>
 
