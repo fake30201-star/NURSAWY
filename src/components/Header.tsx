@@ -83,8 +83,8 @@ export const Header: React.FC<HeaderProps> = ({
           })}
         </nav>
 
-        {/* Left Actions (Dark Mode & Logout on top, Name under them vertically - Compact) */}
-        <div className="flex flex-col items-end gap-1 shrink-0">
+        {/* Left Actions (Vertical on mobile to prevent horizontal scroll, Horizontal on desktop to prevent vertical scroll) */}
+        <div className="flex flex-col lg:flex-row items-end lg:items-center gap-1.5 shrink-0">
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setDarkMode(!darkMode)}
@@ -109,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({
           {isLoggedIn && (
             <button
               onClick={() => setActiveTab('my-progress')}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-950/40 border border-purple-500/30 text-purple-200 text-[10px] sm:text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all max-w-[130px] sm:max-w-[160px]"
+              className="flex items-center gap-1 px-2 py-1.5 lg:py-2 rounded-lg bg-purple-950/40 border border-purple-500/30 text-purple-200 text-[10px] sm:text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all max-w-[130px] sm:max-w-[160px]"
               title="اعرض تقدمك الشخصي"
             >
               <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
