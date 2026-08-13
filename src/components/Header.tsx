@@ -31,14 +31,14 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-purple-500/20 shadow-lg shadow-purple-950/30 transition-all dir-rtl overflow-hidden">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-2">
         
         {/* Brand (Logo, Title, and M for MADA badge) - Right side */}
         <div 
           onClick={() => setActiveTab('home')}
           className="flex items-center gap-2 cursor-pointer group select-none shrink-0"
         >
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] shadow-md shadow-purple-500/30 group-hover:scale-105 transition-transform">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] shadow-md shadow-purple-500/30 group-hover:scale-105 transition-transform">
             <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center text-cyan-400">
               <Stethoscope className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
             </div>
@@ -71,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
                   isActive
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/30 scale-105'
                     : 'text-slate-300 hover:text-white hover:bg-purple-500/10'
@@ -88,10 +88,10 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-1">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="p-1.5 rounded-lg bg-slate-900 border border-purple-500/20 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-all cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-lg bg-slate-900 border border-purple-500/20 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-all cursor-pointer"
               title="تبديل المظهر"
             >
-              {darkMode ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
             {isLoggedIn && (
