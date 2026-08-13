@@ -31,7 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-purple-500/20 shadow-lg shadow-purple-950/30 transition-all dir-rtl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-20 py-3 sm:py-0 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 sm:gap-4">
         
         {/* Brand */}
         <div 
@@ -85,34 +85,36 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-2.5 rounded-xl bg-slate-900 border border-purple-500/20 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-all cursor-pointer"
-            title="تبديل المظهر"
-          >
-            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
+        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 order-1">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2.5 rounded-xl bg-slate-900 border border-purple-500/20 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-all cursor-pointer"
+              title="تبديل المظهر"
+            >
+              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+
+            {isLoggedIn && (
+              <button
+                onClick={logout}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-all text-xs font-bold cursor-pointer"
+                title="تسجيل الخروج"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden md:inline">خروج</span>
+              </button>
+            )}
+          </div>
 
           {isLoggedIn && (
             <button
               onClick={() => setActiveTab('my-progress')}
-              className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-[11px] sm:text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all max-w-[110px] sm:max-w-none"
+              className="order-2 flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-[11px] sm:text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all max-w-[160px] sm:max-w-none"
               title="اعرض تقدمك الشخصي"
             >
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
               <span className="truncate">{fullName || email}{isAdmin ? ' (أدمن)' : ''}</span>
-            </button>
-          )}
-
-          {isLoggedIn && (
-            <button
-              onClick={logout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-all text-xs font-bold cursor-pointer"
-              title="تسجيل الخروج"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden md:inline">خروج</span>
             </button>
           )}
         </div>
