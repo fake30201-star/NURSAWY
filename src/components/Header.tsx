@@ -30,22 +30,22 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-purple-500/20 shadow-lg shadow-purple-950/30 transition-all dir-rtl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-purple-500/20 shadow-lg shadow-purple-950/30 transition-all dir-rtl overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2">
         
         {/* Brand (Logo, Title, and M for MADA badge) - Right side */}
         <div 
           onClick={() => setActiveTab('home')}
-          className="flex items-center gap-3 cursor-pointer group select-none shrink-0"
+          className="flex items-center gap-2 sm:gap-3 cursor-pointer group select-none shrink-0"
         >
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] shadow-lg shadow-purple-500/30 group-hover:scale-105 transition-transform">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-cyan-400">
-              <Stethoscope className="w-6 h-6 animate-pulse" />
+          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[2px] shadow-lg shadow-purple-500/30 group-hover:scale-105 transition-transform">
+            <div className="w-full h-full bg-slate-950 rounded-[10px] sm:rounded-[14px] flex items-center justify-center text-cyan-400">
+              <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
             </div>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-2xl tracking-tight bg-gradient-to-r from-white via-purple-200 to-cyan-300 bg-clip-text text-transparent">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="font-extrabold text-lg sm:text-2xl tracking-tight bg-gradient-to-r from-white via-purple-200 to-cyan-300 bg-clip-text text-transparent">
                 Nursawy
               </span>
               <a
@@ -53,13 +53,13 @@ export const Header: React.FC<HeaderProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm hover:bg-purple-500/30 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm hover:bg-purple-500/30 transition-colors cursor-pointer"
               >
-                <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                <Sparkles className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-cyan-400" />
                 تصميم M for MADA
               </a>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium">منصة التمريض الإكلينيكي المتقدم</p>
+            <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium">منصة التمريض الإكلينيكي المتقدم</p>
           </div>
         </div>
 
@@ -83,24 +83,24 @@ export const Header: React.FC<HeaderProps> = ({
           })}
         </nav>
 
-        {/* Left Actions (Dark Mode & Logout on top, Name under them vertically) */}
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
-          <div className="flex items-center gap-2">
+        {/* Left Actions (Dark Mode & Logout on top, Name under them vertically - Compact) */}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2.5 rounded-xl bg-slate-900 border border-purple-500/20 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-all cursor-pointer"
+              className="p-2 rounded-lg bg-slate-900 border border-purple-500/20 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-all cursor-pointer"
               title="تبديل المظهر"
             >
-              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
             {isLoggedIn && (
               <button
                 onClick={logout}
-                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-900 border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-all text-xs font-bold cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-slate-900 border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-all text-[11px] font-bold cursor-pointer"
                 title="تسجيل الخروج"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden md:inline">خروج</span>
               </button>
             )}
@@ -109,10 +109,10 @@ export const Header: React.FC<HeaderProps> = ({
           {isLoggedIn && (
             <button
               onClick={() => setActiveTab('my-progress')}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all max-w-[150px] sm:max-w-[180px]"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-950/40 border border-purple-500/30 text-purple-200 text-[10px] sm:text-xs font-bold cursor-pointer hover:bg-purple-900/50 hover:border-purple-400/50 transition-all max-w-[130px] sm:max-w-[160px]"
               title="اعرض تقدمك الشخصي"
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
               <span className="truncate">{fullName || email}{isAdmin ? ' (أدمن)' : ''}</span>
             </button>
           )}
@@ -120,12 +120,12 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Mobile Navigation Scrollbar */}
-      <div className="lg:hidden flex items-center gap-2 px-4 py-2 bg-slate-900/95 overflow-x-auto border-t border-purple-500/10 no-scrollbar">
+      <div className="lg:hidden flex items-center gap-1.5 px-2 py-1.5 bg-slate-900/95 overflow-x-auto border-t border-purple-500/10 no-scrollbar">
         {navItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`whitespace-nowrap px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
               activeTab === item.id
                 ? 'bg-purple-600 text-white shadow-sm shadow-purple-500/30'
                 : 'text-slate-300 bg-slate-800/60'
