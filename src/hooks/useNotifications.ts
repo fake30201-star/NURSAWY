@@ -2,31 +2,42 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { AppNotification } from '../types';
 
+// بعض البيئات (زي المعاينة جوه إطار iframe مقيّد أو متصفحات بسياسات صارمة) بتمنع
+// الوصول لـ Notification API خالص وبترمي خطأ (SecurityError) لمجرد ما تقرأ أي خاصية
+// منها. الدالة دي بتتأكد إن الوصول آمن قبل ما نستخدمه في أي مكان، عشان الموقع
+// (وأهم حاجة: جرس الإشعارات) ميتكسرش أبدًا حتى لو الإذن ده مش متاح خالص.
+function safeGetNotificationPermission(): NotificationPermission {
+  try {
+    if (typeof Notification === 'undefined') return 'denied';
+    return Notification.permission;
+  } catch {
+    return 'denied';
+  }
+}
+
 // هوك مركزي للإشعارات: بيجيب الإشعارات المحفوظة، ويشترك في التحديث اللحظي (Realtime)
 // عشان أي إشعار جديد (طلب جديد / تسعير / موافقة / رسالة شات / تسليم...) يوصل فورًا،
 // وكمان بيحاول يعرض إشعار متصفح (Browser Notification) لو المستخدم موافق على الإذن.
 export function useNotifications(userId: string | null | undefined) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [permission, setPermission] = useState<NotificationPermission>(
-    typeof Notification !== 'undefined' ? Notification.permission : 'denied'
-  );
+  const [permission, setPermission] = useState<NotificationPermission>(safeGetNotificationPermission());
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const requestPermission = async () => {
-    if (typeof Notification === 'undefined') return;
     try {
+      if (typeof Notification === 'undefined') return;
       const result = await Notification.requestPermission();
       setPermission(result);
     } catch {
-      // المتصفح مش بيدعم الإشعارات أو المستخدم رفض — مفيش داعي نعطل الموقع
+      // المتصفح مش بيدعم الإشعارات، أو رفض الإذن، أو البيئة مقيّدة (زي إطار iframe) — مفيش داعي نعطل الموقع
     }
   };
 
   const showBrowserNotification = (title: string, body: string) => {
-    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     try {
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
       // لو فيه service worker شغال، استخدمه عشان الإشعار يبان حتى لو التاب في الخلفية
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistration().then((reg) => {
@@ -35,12 +46,12 @@ export function useNotifications(userId: string | null | undefined) {
           } else {
             new Notification(title, { body, icon: '/icon.svg' });
           }
-        });
+        }).catch(() => {});
       } else {
         new Notification(title, { body, icon: '/icon.svg' });
       }
     } catch {
-      // تجاهل أي خطأ في عرض الإشعار عشان ميكسرش باقي الموقع
+      // تجاهل أي خطأ في عرض الإشعار عشان ميكسرش باقي الموقع (بما فيه جرس الإشعارات نفسه)
     }
   };
 
