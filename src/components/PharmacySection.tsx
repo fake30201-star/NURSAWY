@@ -46,6 +46,8 @@ export const PharmacySection: React.FC = () => {
   const { user } = useAuth();
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(true);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [usingDefaultLocation, setUsingDefaultLocation] = useState(false);
   const [pharmacies, setPharmacies] = useState<PharmacyProfile[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [requestText, setRequestText] = useState('');
@@ -57,23 +59,53 @@ export const PharmacySection: React.FC = () => {
   const [myOrders, setMyOrders] = useState<PharmacyOrder[]>([]);
 
   // 1) تحديد موقع المريض
-  useEffect(() => {
-    if (!navigator.geolocation) {
+  const detectMyLocation = () => {
+    setLocating(true);
+    setLocationError(null);
+    setUsingDefaultLocation(false);
+
+    if (!window.isSecureContext) {
+      setLocationError('تحديد الموقع بيحتاج اتصال آمن (https). افتح الموقع من الرابط الرسمي بتاعه.');
       setMyLocation(DEFAULT_CENTER);
+      setUsingDefaultLocation(true);
       setLocating(false);
       return;
     }
+
+    if (!navigator.geolocation) {
+      setLocationError('المتصفح ده مش بيدعم تحديد الموقع.');
+      setMyLocation(DEFAULT_CENTER);
+      setUsingDefaultLocation(true);
+      setLocating(false);
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setMyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocating(false);
       },
-      () => {
+      (err) => {
+        let msg = 'تعذر تحديد موقعك. حاول تاني.';
+        if (err.code === err.PERMISSION_DENIED) {
+          msg = 'تم رفض إذن الموقع. من فضلك فعّل صلاحية الموقع لهذا الموقع من إعدادات المتصفح ثم حاول تاني.';
+        } else if (err.code === err.TIMEOUT) {
+          msg = 'استغرق تحديد الموقع وقت طويل. تأكد إن خدمة الموقع (GPS) شغالة على جهازك وحاول تاني.';
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          msg = 'تعذر الوصول لموقعك الحالي. تأكد إن خدمة الموقع مفعّلة على جهازك.';
+        }
+        setLocationError(msg);
         setMyLocation(DEFAULT_CENTER);
+        setUsingDefaultLocation(true);
         setLocating(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
+  };
+
+  useEffect(() => {
+    detectMyLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 2) جلب الصيدليات المسجلة
@@ -222,6 +254,19 @@ export const PharmacySection: React.FC = () => {
 
       {/* Map */}
       <div className="bg-slate-900 border border-emerald-500/20 rounded-3xl p-4 sm:p-6 space-y-4">
+        {locationError && (
+          <div className="flex items-center justify-between gap-3 flex-wrap bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
+            <p className="text-xs text-amber-300 font-bold">
+              {locationError} {usingDefaultLocation && '(بنعرض حاليًا صيدليات حوالين القاهرة كموقع مبدئي)'}
+            </p>
+            <button
+              onClick={detectMyLocation}
+              className="shrink-0 text-xs font-bold bg-amber-600 text-white rounded-lg px-3 py-1.5 cursor-pointer"
+            >
+              حاول تحديد موقعي تاني
+            </button>
+          </div>
+        )}
         {locating ? (
           <div className="h-72 flex items-center justify-center gap-2 text-slate-400 text-sm">
             <Loader2 className="w-5 h-5 animate-spin" />
