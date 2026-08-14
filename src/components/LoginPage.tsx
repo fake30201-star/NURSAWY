@@ -67,7 +67,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           return;
         }
         if (accountRole === 'pharmacy') {
-          if (!pharmacyName.trim() || !pharmacyPhone.trim() || !pharmacyAddress.trim()) {
+          if (!pharmacyName.trim() || !pharmacyPhone.trim() || !pharmacyAddress.trim())
+            if (pharmacyLat == null || pharmacyLng == null) {
+  setError('من فضلك دوس على "تحديد موقعي الحالي" وسمح بالوصول للموقع، عشان الصيدلية تظهر للمرضى على الخريطة.');
+  setLoading(false);
+  return;
+}
+          {
             setError('من فضلك اكمل بيانات الصيدلية: الاسم، الرقم، والموقع');
             setLoading(false);
             return;
