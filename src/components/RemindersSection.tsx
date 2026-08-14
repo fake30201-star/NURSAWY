@@ -2,6 +2,7 @@ import { AlertCircle, Bell, CheckCircle2, Clock, Loader2, Plus, Trash2 } from 'l
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../hooks/useNotifications';
 
 interface Reminder {
   id: string;
@@ -22,6 +23,7 @@ function pad2(n: number) {
 
 export const RemindersSection: React.FC = () => {
   const { user } = useAuth();
+  const { permission, requestPermission } = useNotifications(user?.id);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('');
@@ -110,6 +112,15 @@ export const RemindersSection: React.FC = () => {
           <p className="text-xs text-slate-400">مواعيد المناوبات، الأدوية، أو أي حاجة تحب تفتكرها</p>
         </div>
       </div>
+
+      {permission !== 'granted' && (
+        <button
+          onClick={requestPermission}
+          className="w-full text-right px-4 py-2.5 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 cursor-pointer hover:bg-amber-500/20"
+        >
+          🔔 فعّل إشعارات المتصفح عشان توصلك تنبيهات التذكيرات حتى وانت مش فاتح الموقع
+        </button>
+      )}
 
       {/* Add reminder form */}
       <form
