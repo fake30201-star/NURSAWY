@@ -22,6 +22,7 @@ import { OSCE_SKILLS } from './data/clinicalData';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SiteContentProvider } from './context/SiteContentContext';
 import { supabase } from './lib/supabaseClient';
+import { useReminderAlerts } from './hooks/useReminderAlerts';
 
 function buildEmptyProgress(): Record<string, boolean[]> {
   const initial: Record<string, boolean[]> = {};
@@ -35,6 +36,10 @@ function AppShell() {
   const { user, isLoggedIn, loading: authLoading, isPharmacy } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('home');
   const [darkMode, setDarkMode] = useState<boolean>(true);
+
+  // بيراقب تذكيرات المستخدم في الخلفية طول ما هو داخل الموقع، حتى لو مش فاتح
+  // صفحة التذكيرات، وبيبعت إشعار أول ما ميعاد أي تذكير يستحق.
+  useReminderAlerts(isLoggedIn ? user?.id : null);
 
   // OSCE Skills state: { skillId: [true, false, ...] }
   const [completedStepsMap, setCompletedStepsMap] = useState<Record<string, boolean[]>>(() => {
