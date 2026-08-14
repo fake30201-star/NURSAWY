@@ -244,7 +244,14 @@ export const PharmacySection: React.FC = () => {
       setSelected(new Set());
     } catch (err) {
       console.error('handleSend failed:', err);
-      setSendError(err instanceof Error ? err.message : 'حصل خطأ أثناء إرسال الطلب');
+      const rawMsg = err instanceof Error ? err.message : '';
+      if (rawMsg.includes('Lock') || rawMsg.includes('lock')) {
+        setSendError(
+          'في تعارض لأن الموقع مفتوح في أكتر من تاب/نافذة في نفس الوقت. اقفل باقي التابات (أو التطبيق المثبت لو مفتوح كمان) وسيب تاب واحد بس، وحاول تاني.'
+        );
+      } else {
+        setSendError(rawMsg || 'حصل خطأ أثناء إرسال الطلب');
+      }
     } finally {
       setSending(false);
     }
@@ -252,6 +259,10 @@ export const PharmacySection: React.FC = () => {
 
   const handleApprove = async (order: PharmacyOrder) => {
     await supabase.from('pharmacy_orders').update({ status: 'confirmed', updated_at: new Date().toISOString() }).eq('id', order.id);
+  };
+
+  const handleConfirmReceipt = async (order: PharmacyOrder) => {
+    await supabase.from('pharmacy_orders').update({ status: 'delivered', updated_at: new Date().toISOString() }).eq('id', order.id);
   };
 
   const handleCancel = async (order: PharmacyOrder) => {
@@ -376,7 +387,7 @@ export const PharmacySection: React.FC = () => {
         <div className="space-y-4">
           <h3 className="font-extrabold text-white text-base px-1">طلباتي</h3>
           {myOrders.map((order) => (
-            <PatientOrderCard key={order.id} order={order} pharmacies={pharmacies} onApprove={handleApprove} onCancel={handleCancel} />
+            <PatientOrderCard key={order.id} order={order} pharmacies={pharmacies} onApprove={handleApprove} onCancel={handleCancel} onConfirmReceipt={handleConfirmReceipt} />
           ))}
         </div>
       )}
@@ -389,7 +400,8 @@ const PatientOrderCard: React.FC<{
   pharmacies: PharmacyProfile[];
   onApprove: (o: PharmacyOrder) => void;
   onCancel: (o: PharmacyOrder) => void;
-}> = ({ order, pharmacies, onApprove, onCancel }) => {
+  onConfirmReceipt: (o: PharmacyOrder) => void;
+}> = ({ order, pharmacies, onApprove, onCancel, onConfirmReceipt }) => {
   const [chatOpen, setChatOpen] = useState(false);
   const [ratingDone, setRatingDone] = useState(false);
   const pharmacy = pharmacies.find((p) => p.id === order.pharmacy_id);
@@ -464,6 +476,16 @@ const PatientOrderCard: React.FC<{
             </a>
           )}
         </div>
+      )}
+
+      {order.status === 'out_for_delivery' && (
+        <button
+          onClick={() => onConfirmReceipt(order)}
+          className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-white font-bold py-2.5 text-xs cursor-pointer"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          استلمت الأوردر — تأكيد الاستلام
+        </button>
       )}
 
       <div className="flex items-center gap-2 pt-1">
