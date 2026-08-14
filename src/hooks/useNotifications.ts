@@ -64,15 +64,22 @@ export function useNotifications(userId: string | null | undefined) {
 
     let active = true;
 
-    (async () => {
-      const { data } = await supabase
+    const fetchLatest = async () => {
+      const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('recipient_id', userId)
         .order('created_at', { ascending: false })
         .limit(50);
+      if (error) {
+        // بنسجل الخطأ في الـ Console عشان لو فيه مشكلة صلاحيات (RLS) أو اتصال تبان فورًا
+        console.error('تعذر تحميل الإشعارات:', error.message);
+        return;
+      }
       if (active && data) setNotifications(data as AppNotification[]);
-    })();
+    };
+
+    fetchLatest();
 
     const channel = supabase
       .channel(`notifications_${userId}`)
@@ -81,16 +88,25 @@ export function useNotifications(userId: string | null | undefined) {
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${userId}` },
         (payload) => {
           const notif = payload.new as AppNotification;
-          setNotifications((prev) => [notif, ...prev]);
+          setNotifications((prev) => (prev.some((n) => n.id === notif.id) ? prev : [notif, ...prev]));
           showBrowserNotification(notif.title, notif.body);
           // صوت تنبيه بسيط (اختياري — بيتجاهل لو المتصفح رفض التشغيل التلقائي)
           audioRef.current?.play().catch(() => {});
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('تعذر الاشتراك في التحديث اللحظي للإشعارات، الحالة:', status);
+        }
+      });
+
+    // فحص احتياطي (Polling) كل 25 ثانية: لو التحديث اللحظي (Realtime) اتعطل لأي
+    // سبب (شبكة، بروكسي، إلخ)، المستخدم برضه هيشوف الإشعارات الجديدة خلال ثواني معدودة
+    const pollInterval = setInterval(fetchLatest, 25000);
 
     return () => {
       active = false;
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [userId]);
