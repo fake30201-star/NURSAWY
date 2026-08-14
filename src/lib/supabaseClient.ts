@@ -12,4 +12,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
+// ملحوظة: بنعطّل آلية "Navigator Lock" الافتراضية في مكتبة Supabase، لأنها بتسبب
+// تعارض ("Lock broken by another request") لما يكون نفس الموقع مفتوح في أكتر من
+// تاب/نافذة في نفس الوقت. تعطيلها بيخلي كل تاب يجدد صلاحية الدخول لوحده من غير قفل مشترك.
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
+  auth: {
+    lock: async (_name, _acquireTimeout, fn) => fn(),
+  },
+});
