@@ -190,15 +190,33 @@ export const PharmacySection: React.FC = () => {
     setSending(true);
     setSendError(null);
     setSendSuccess(null);
+
+    // مهلة أقصى 20 ثانية — لو حصل أي تعليق في الشبكة أو في Supabase، نوقف السبينر ونوري خطأ واضح بدل ما يفضل يلف للأبد.
+    const withTimeout = <T,>(promise: Promise<T>, label: string): Promise<T> =>
+      Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error(`استغرق "${label}" وقت طويل من غير رد. تأكد من اتصال الإنترنت وإعدادات Supabase وحاول تاني.`)), 20000)
+        ),
+      ]);
+
     try {
       let prescriptionUrl: string | null = null;
       if (prescriptionFile) {
         const fileExt = prescriptionFile.name.split('.').pop();
         const filePath = `${user.id}/${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from('prescriptions')
-          .upload(filePath, prescriptionFile);
-        if (uploadError) throw new Error('تعذر رفع صورة الروشتة: ' + uploadError.message);
+        const { error: uploadError } = await withTimeout(
+          supabase.storage.from('prescriptions').upload(filePath, prescriptionFile),
+          'رفع صورة الروشتة'
+        );
+        if (uploadError) {
+          console.error('Prescription upload error:', uploadError);
+          throw new Error(
+            'تعذر رفع صورة الروشتة: ' +
+              uploadError.message +
+              ' — تأكد إن Storage bucket اسمه "prescriptions" اتعمل في Supabase Dashboard وإنه Public.'
+          );
+        }
         const { data: urlData } = supabase.storage.from('prescriptions').getPublicUrl(filePath);
         prescriptionUrl = urlData.publicUrl;
       }
@@ -214,14 +232,18 @@ export const PharmacySection: React.FC = () => {
         patient_address: addressNote.trim() || null,
       }));
 
-      const { error } = await supabase.from('pharmacy_orders').insert(rows);
-      if (error) throw new Error(error.message);
+      const { error } = await withTimeout(supabase.from('pharmacy_orders').insert(rows), 'إرسال الطلب');
+      if (error) {
+        console.error('Insert pharmacy_orders error:', error);
+        throw new Error(error.message);
+      }
 
       setSendSuccess(`تم إرسال طلبك لـ ${rows.length} صيدلية بنجاح. تابع الردود تحت.`);
       setRequestText('');
       setPrescriptionFile(null);
       setSelected(new Set());
     } catch (err) {
+      console.error('handleSend failed:', err);
       setSendError(err instanceof Error ? err.message : 'حصل خطأ أثناء إرسال الطلب');
     } finally {
       setSending(false);
