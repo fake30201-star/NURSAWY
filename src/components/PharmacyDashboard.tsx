@@ -318,17 +318,11 @@ const PharmacyOrderCard: React.FC<{
         </div>
       )}
 
-      {/* Out for delivery: mark delivered */}
+      {/* Out for delivery: بانتظار تأكيد المريض للاستلام */}
       {order.status === 'out_for_delivery' && (
         <div className="flex items-center justify-between bg-purple-500/10 border border-purple-500/25 rounded-xl px-4 py-3">
           <span className="text-xs text-purple-200">المندوب: {order.rep_name}</span>
-          <button
-            onClick={() => onUpdate(order.id, { status: 'delivered' })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-[11px] cursor-pointer"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            تأكيد التسليم
-          </button>
+          <span className="text-[11px] font-bold text-slate-400">بانتظار تأكيد المريض للاستلام...</span>
         </div>
       )}
 
