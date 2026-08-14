@@ -26,8 +26,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   const [pharmacyLat, setPharmacyLat] = useState<number | null>(null);
   const [pharmacyLng, setPharmacyLng] = useState<number | null>(null);
   const [locatingPharmacy, setLocatingPharmacy] = useState(false);
+  const [locationHint, setLocationHint] = useState<string | null>(null);
 
   const handleDetectPharmacyLocation = () => {
+    setLocationHint(null);
+
+    if (!window.isSecureContext) {
+      setError('تحديد الموقع بيحتاج اتصال آمن (https). افتح الموقع من رابطه الرسمي (مش عن طريق IP أو http).');
+      return;
+    }
     if (!navigator.geolocation) {
       setError('المتصفح ده مش بيدعم تحديد الموقع');
       return;
@@ -38,9 +45,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         setPharmacyLat(pos.coords.latitude);
         setPharmacyLng(pos.coords.longitude);
         setLocatingPharmacy(false);
+        setLocationHint(null);
+        resetMessages();
       },
-      () => {
-        setError('تعذر تحديد موقعك، تأكد من تفعيل صلاحية الموقع للمتصفح');
+      (err) => {
+        let msg = 'تعذر تحديد موقعك، حاول تاني.';
+        if (err.code === err.PERMISSION_DENIED) {
+          msg = 'تم رفض إذن الموقع لهذا الموقع. افتح إعدادات المتصفح (أيقونة القفل بجانب الرابط) وفعّل صلاحية "الموقع" ثم حاول تاني.';
+        } else if (err.code === err.TIMEOUT) {
+          msg = 'استغرق تحديد الموقع وقت طويل. تأكد إن خدمة الموقع (GPS) شغالة على جهازك وحاول تاني.';
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          msg = 'تعذر الوصول لموقعك الحالي. تأكد إن خدمة الموقع مفعّلة على جهازك.';
+        }
+        setLocationHint(msg);
         setLocatingPharmacy(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -67,14 +84,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           return;
         }
         if (accountRole === 'pharmacy') {
-          if (!pharmacyName.trim() || !pharmacyPhone.trim() || !pharmacyAddress.trim())
-            if (pharmacyLat == null || pharmacyLng == null) {
-  setError('من فضلك دوس على "تحديد موقعي الحالي" وسمح بالوصول للموقع، عشان الصيدلية تظهر للمرضى على الخريطة.');
-  setLoading(false);
-  return;
-}
-          {
-            setError('من فضلك اكمل بيانات الصيدلية: الاسم، الرقم، والموقع');
+          if (!pharmacyName.trim()) {
+            setError('من فضلك اكتب اسم الصيدلية (في حقل "اسم الصيدلية" تحت).');
+            setLoading(false);
+            return;
+          }
+          if (!pharmacyPhone.trim()) {
+            setError('من فضلك اكتب رقم تليفون الصيدلية.');
+            setLoading(false);
+            return;
+          }
+          if (!pharmacyAddress.trim()) {
+            setError('من فضلك اكتب عنوان الصيدلية في حقل "لوكيشن الصيدلية (العنوان)".');
+            setLoading(false);
+            return;
+          }
+          if (pharmacyLat == null || pharmacyLng == null) {
+            setError('من فضلك دوس على زرار "تحديد موقعي الحالي" وسمح بالوصول للموقع، عشان الصيدلية تظهر للمرضى على الخريطة.');
             setLoading(false);
             return;
           }
@@ -274,6 +300,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                         ? 'تم تحديد إحداثيات الصيدلية ✓ (اضغط لإعادة التحديد)'
                         : 'تحديد موقعي الحالي على الخريطة'}
                     </button>
+                    {locationHint && (
+                      <p className="mt-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1.5">
+                        {locationHint}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
