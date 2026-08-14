@@ -1,13 +1,29 @@
-import { Award, Calendar, CheckCircle2, Loader2, Sparkles, Star, TrendingUp, User } from 'lucide-react';
+import { AlertTriangle, Award, Calendar, CheckCircle2, Loader2, Sparkles, Star, Trash2, TrendingUp, User, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { OSCE_SKILLS } from '../data/clinicalData';
 
 export const MyProgressSection: React.FC = () => {
-  const { user, fullName, email, isSubscribed } = useAuth();
+  const { user, fullName, email, isSubscribed, deleteAccount } = useAuth();
   const [skillProgress, setSkillProgress] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const handleDeleteAccount = async () => {
+    setDeleteError('');
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      // بعد الحذف، الجلسة بتتقفل تلقائيًا وهيرجع لصفحة تسجيل الدخول
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'حصل خطأ غير متوقع');
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -132,6 +148,85 @@ export const MyProgressSection: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* Danger zone: delete account */}
+      <div className="bg-red-950/20 border border-red-500/30 rounded-2xl p-5 sm:p-6">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5 text-red-400" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-red-300 text-sm">حذف الحساب</h3>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              حذف حسابك هيمسح كل بياناتك نهائيًا (تقدمك، طلبات الصيدلية، التذكيرات، الإشعارات)
+              وده إجراء مش قابل للتراجع.
+            </p>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="mt-3 flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600/20 border border-red-500/40 text-red-300 text-xs font-bold hover:bg-red-600/30 transition-all cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              حذف حسابي نهائيًا
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 dir-rtl">
+          <div className="bg-slate-900 border border-red-500/30 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+                تأكيد حذف الحساب
+              </h3>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setConfirmText('');
+                  setDeleteError('');
+                }}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed mb-4">
+              الإجراء ده نهائي ومش هترجع فيه. هيتمسح حسابك وكل بياناتك المرتبطة بيه فورًا.
+              اكتب <span className="text-red-300 font-bold">حذف</span> في الخانة تحت عشان تأكد.
+            </p>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="اكتب: حذف"
+              className="w-full rounded-xl bg-slate-950 border border-red-500/30 text-slate-100 py-2.5 px-3 text-sm text-center focus:outline-none focus:border-red-500/60"
+            />
+            {deleteError && <p className="text-xs text-red-400 mt-2">{deleteError}</p>}
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setConfirmText('');
+                  setDeleteError('');
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={confirmText !== 'حذف' || deleting}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-600 text-white text-xs font-bold disabled:opacity-40 cursor-pointer"
+              >
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                حذف نهائيًا
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
