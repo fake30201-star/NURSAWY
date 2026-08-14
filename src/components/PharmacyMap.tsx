@@ -45,10 +45,26 @@ export const PharmacyMap: React.FC<PharmacyMapProps> = ({ centerLat, centerLng, 
   const mapRef = useRef<any>(null);
   const markersLayerRef = useRef<any>(null);
 
-  // إنشاء الخريطة مرة واحدة
+  // إنشاء الخريطة مرة واحدة (مع إعادة محاولة بسيطة لو مكتبة Leaflet لسه بتحمل)
   useEffect(() => {
-    if (!containerRef.current || !window.L) return;
+    if (!containerRef.current) return;
     if (mapRef.current) return;
+
+    if (!window.L) {
+      const retry = setTimeout(() => {
+        // إعادة تشغيل التأثير ده تانيًا لو المكتبة اتحملت دلوقتي
+        if (window.L && containerRef.current && !mapRef.current) {
+          const map = window.L.map(containerRef.current, { zoomControl: true, attributionControl: true }).setView([centerLat, centerLng], zoom);
+          window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors',
+          }).addTo(map);
+          markersLayerRef.current = window.L.layerGroup().addTo(map);
+          mapRef.current = map;
+        }
+      }, 300);
+      return () => clearTimeout(retry);
+    }
 
     const map = window.L.map(containerRef.current, {
       zoomControl: true,
