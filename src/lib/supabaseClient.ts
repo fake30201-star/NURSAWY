@@ -12,11 +12,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// ملحوظة: بنعطّل آلية "Navigator Lock" الافتراضية في مكتبة Supabase، لأنها بتسبب
-// تعارض ("Lock broken by another request") لما يكون نفس الموقع مفتوح في أكتر من
-// تاب/نافذة في نفس الوقت. تعطيلها بيخلي كل تاب يجدد صلاحية الدخول لوحده من غير قفل مشترك.
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
-  auth: {
-    lock: async (_name, _acquireTimeout, fn) => fn(),
-  },
-});
+// ملاحظة: بنسيب آلية "Navigator Lock" الافتراضية في مكتبة Supabase شغالة زي ما هي
+// (من غير أي تعديل عليها). هي المسؤولة عن تنسيق تجديد جلسة الدخول (Refresh Token)
+// بين أكتر من تاب/نافذة مفتوحة لنفس الموقع في نفس الوقت، عشان تاب واحد بس يجدد
+// الجلسة في كل لحظة بدل ما كل تاب يحاول لوحده — ده اللي بيمنع أخطاء زي
+// "AuthRefreshDiscardedError" وأخطاء 429 (طلبات كتير أوي) اللي بتحصل لو الموقع
+// مفتوح في أكتر من تاب واحد.
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
