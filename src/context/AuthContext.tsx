@@ -46,6 +46,7 @@ interface AuthContextValue {
     pharmacyInfo?: PharmacyRegistrationInfo
   ) => Promise<{ needsEmailConfirmation: boolean }>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -258,6 +259,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem(SESSION_TOKEN_KEY);
   };
 
+  // بيمسح حساب المستخدم نهائيًا (وكل بياناته المرتبطة به) عن طريق دالة
+  // delete_user_account في قاعدة البيانات، وبعدين يسجل خروجه من الجهاز ده.
+  const deleteAccount = async () => {
+    const { error } = await supabase.rpc('delete_user_account');
+    if (error) throw new Error('تعذر حذف الحساب: ' + error.message);
+    await supabase.auth.signOut();
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -278,6 +288,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
+        deleteAccount,
       }}
     >
       {children}
