@@ -1,20 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Header } from './components/Header';
 import { LoginPage } from './components/LoginPage';
 import { HomeSection } from './components/HomeSection';
-import { AiDictionarySection } from './components/AiDictionarySection';
-import { OsceSkillsSection } from './components/OsceSkillsSection';
-import { DripCalculatorSection } from './components/DripCalculatorSection';
-import { EmergencySection } from './components/EmergencySection';
-import { HandoverSection } from './components/HandoverSection';
-import { ClinicalCaseSimulator } from './components/ClinicalCaseSimulator';
-import { ClinicalGuidesSection } from './components/ClinicalGuidesSection';
-import { PharmacySection } from './components/PharmacySection';
-import { PharmacyDashboard } from './components/PharmacyDashboard';
-import { AdminDashboard } from './components/AdminDashboard';
-import { MyProgressSection } from './components/MyProgressSection';
-import { RemindersSection } from './components/RemindersSection';
-import { ContactSection } from './components/ContactSection';
 import { AnnouncementBanner } from './components/AnnouncementBanner';
 import { EditableText } from './components/EditableText';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -22,6 +9,29 @@ import { OSCE_SKILLS } from './data/clinicalData';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SiteContentProvider } from './context/SiteContentContext';
 import { supabase } from './lib/supabaseClient';
+
+// تحميل كسول (Lazy Loading): كل قسم من دول بيتحمل بس أول ما المستخدم يدوس عليه فعليًا،
+// بدل ما كل أقسام الموقع تتحمل مع بعض من أول لحظة فتح — ده بيقلل حجم التحميل الأول بشكل كبير.
+const AiDictionarySection = lazy(() => import('./components/AiDictionarySection').then((m) => ({ default: m.AiDictionarySection })));
+const OsceSkillsSection = lazy(() => import('./components/OsceSkillsSection').then((m) => ({ default: m.OsceSkillsSection })));
+const DripCalculatorSection = lazy(() => import('./components/DripCalculatorSection').then((m) => ({ default: m.DripCalculatorSection })));
+const EmergencySection = lazy(() => import('./components/EmergencySection').then((m) => ({ default: m.EmergencySection })));
+const HandoverSection = lazy(() => import('./components/HandoverSection').then((m) => ({ default: m.HandoverSection })));
+const ClinicalCaseSimulator = lazy(() => import('./components/ClinicalCaseSimulator').then((m) => ({ default: m.ClinicalCaseSimulator })));
+const ClinicalGuidesSection = lazy(() => import('./components/ClinicalGuidesSection').then((m) => ({ default: m.ClinicalGuidesSection })));
+const PharmacySection = lazy(() => import('./components/PharmacySection').then((m) => ({ default: m.PharmacySection })));
+const PharmacyDashboard = lazy(() => import('./components/PharmacyDashboard').then((m) => ({ default: m.PharmacyDashboard })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
+const MyProgressSection = lazy(() => import('./components/MyProgressSection').then((m) => ({ default: m.MyProgressSection })));
+const RemindersSection = lazy(() => import('./components/RemindersSection').then((m) => ({ default: m.RemindersSection })));
+const ContactSection = lazy(() => import('./components/ContactSection').then((m) => ({ default: m.ContactSection })));
+
+// مؤشر تحميل بسيط بيظهر لحظة تحميل أي قسم كسول
+const SectionLoader = () => (
+  <div className="flex items-center justify-center py-24">
+    <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 function buildEmptyProgress(): Record<string, boolean[]> {
   const initial: Record<string, boolean[]> = {};
@@ -220,6 +230,7 @@ function AppShell() {
 
       {/* Main Content Area */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Suspense fallback={<SectionLoader />}>
         {activeTab === 'home' && (
           <ErrorBoundary sectionName="الرئيسية">
             <HomeSection onNavigate={setActiveTab} overallProgress={overallProgress} />
@@ -301,6 +312,7 @@ function AppShell() {
             <MyProgressSection />
           </ErrorBoundary>
         )}
+        </Suspense>
       </main>
 
       {/* Footer */}
