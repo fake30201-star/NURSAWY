@@ -124,22 +124,3 @@ export function useNotifications(userId: string | null | undefined) {
 
   return { notifications, unreadCount, permission, requestPermission, markAsRead, markAllAsRead };
 }
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error('تعذر الاشتراك في التحديث اللحظي للإشعارات، الحالة:', status);
-        }
-      });
-
-    // فحص احتياطي (Polling) كل 25 ثانية: لو التحديث اللحظي (Realtime) اتعطل لأي
-    // سبب (شبكة، بروكسي، إلخ)، المستخدم برضه هيشوف الإشعارات الجديدة خلال ثواني معدودة
-    const pollInterval = setInterval(fetchLatest, 25000);
-
-    return () => {
-      active = false;
-      clearInterval(pollInterval);
-      supabase.removeChannel(channel);
-    };
-  }, [userId]);
-
-  return { notifications, unreadCount, permission, requestPermission, markAsRead, markAllAsRead };
-}
