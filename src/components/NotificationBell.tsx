@@ -80,7 +80,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, onOp
             </button>
           )}
 
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-80 overflow-y-auto min-h-[80px]">
+            {/* سطر تشخيصي مؤقت — هيوضح العدد الحقيقي اللي الكود شايفه، وهنشيله بعد ما نتأكد المشكلة اتحلت */}
+            <p className="px-4 py-1.5 text-[10px] text-amber-400 bg-amber-500/5 border-b border-amber-500/10">
+              🔧 تشخيص: عدد الإشعارات المحمّلة = {notifications.length} | غير مقروء = {unreadCount}
+            </p>
             {notifications.length === 0 ? (
               <p className="text-center text-xs text-slate-500 py-8">مفيش إشعارات لسه</p>
             ) : (
@@ -95,8 +99,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, onOp
                   <div className="flex items-start gap-2">
                     {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />}
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{n.title}</p>
-                      <p className="text-[11px] text-slate-400 line-clamp-2">{n.body}</p>
+                      <p className="text-xs font-bold text-white truncate">{n.title || '(بدون عنوان)'}</p>
+                      <p className="text-[11px] text-slate-400 line-clamp-2">{n.body || '(بدون نص)'}</p>
                       <p className="text-[10px] text-slate-500 mt-1">{timeAgo(n.created_at)}</p>
                     </div>
                   </div>
