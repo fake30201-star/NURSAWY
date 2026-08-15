@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, BellRing, Check } from 'lucide-react';
+import { Bell, BellRing, Check, Trash2, X } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { AppNotification } from '../types';
 
@@ -20,7 +20,7 @@ function timeAgo(iso: string): string {
 }
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, onOpenOrder }) => {
-  const { notifications, unreadCount, permission, requestPermission, markAsRead, markAllAsRead } =
+  const { notifications, unreadCount, permission, requestPermission, markAsRead, markAllAsRead, deleteNotification, deleteAllNotifications } =
     useNotifications(userId);
   const [open, setOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -60,15 +60,28 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, onOp
         <div className="absolute left-0 mt-2 w-80 max-w-[90vw] bg-slate-900 border border-purple-500/20 rounded-2xl shadow-2xl shadow-purple-950/50 z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-purple-500/10">
             <span className="font-bold text-sm text-white">الإشعارات</span>
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllAsRead}
-                className="flex items-center gap-1 text-[10px] font-bold text-emerald-300 cursor-pointer"
-              >
-                <Check className="w-3 h-3" />
-                علّم الكل كمقروء
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="flex items-center gap-1 text-[10px] font-bold text-emerald-300 cursor-pointer"
+                >
+                  <Check className="w-3 h-3" />
+                  علّم الكل كمقروء
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (confirm('تأكيد مسح كل الإشعارات؟ الإجراء ده مش قابل للتراجع.')) deleteAllNotifications();
+                  }}
+                  className="flex items-center gap-1 text-[10px] font-bold text-red-300 cursor-pointer"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  امسح الكل
+                </button>
+              )}
+            </div>
           </div>
 
           {permission !== 'granted' && (
@@ -80,31 +93,36 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, onOp
             </button>
           )}
 
-          <div className="max-h-80 overflow-y-auto min-h-[80px]">
-            {/* سطر تشخيصي مؤقت — هيوضح العدد الحقيقي اللي الكود شايفه، وهنشيله بعد ما نتأكد المشكلة اتحلت */}
-            <p className="px-4 py-1.5 text-[10px] text-amber-400 bg-amber-500/5 border-b border-amber-500/10">
-              🔧 تشخيص: عدد الإشعارات المحمّلة = {notifications.length} | غير مقروء = {unreadCount}
-            </p>
+          <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <p className="text-center text-xs text-slate-500 py-8">مفيش إشعارات لسه</p>
             ) : (
               notifications.map((n) => (
-                <button
+                <div
                   key={n.id}
-                  onClick={() => handleClickNotification(n)}
-                  className={`w-full text-right px-4 py-3 border-b border-purple-500/5 transition-colors cursor-pointer ${
+                  className={`w-full flex items-start gap-2 px-4 py-3 border-b border-purple-500/5 transition-colors ${
                     n.is_read ? 'bg-transparent' : 'bg-purple-500/10'
                   } hover:bg-purple-500/15`}
                 >
-                  <div className="flex items-start gap-2">
+                  <button onClick={() => handleClickNotification(n)} className="flex items-start gap-2 flex-1 min-w-0 text-right cursor-pointer">
                     {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />}
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{n.title || '(بدون عنوان)'}</p>
-                      <p className="text-[11px] text-slate-400 line-clamp-2">{n.body || '(بدون نص)'}</p>
+                      <p className="text-xs font-bold text-white truncate">{n.title}</p>
+                      <p className="text-[11px] text-slate-400 line-clamp-2">{n.body}</p>
                       <p className="text-[10px] text-slate-500 mt-1">{timeAgo(n.created_at)}</p>
                     </div>
-                  </div>
-                </button>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteNotification(n.id);
+                    }}
+                    title="حذف الإشعار"
+                    className="shrink-0 p-1 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-500/10 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               ))
             )}
           </div>
