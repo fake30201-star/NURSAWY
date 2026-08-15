@@ -178,7 +178,11 @@ export const PharmacySection: React.FC = () => {
   };
 
   const handleSend = async () => {
-    if (!user || !myLocation) return;
+    if (!user) return;
+    if (!myLocation) {
+      setSendError('لسه بنحدد موقعك... استنى ثانية وحاول تاني. لو الرسالة فضلت، تأكد إنك وافقت على إذن الموقع من المتصفح.');
+      return;
+    }
     if (selected.size === 0) {
       setSendError('اختر صيدلية واحدة على الأقل من القائمة أو الخريطة');
       return;
@@ -374,11 +378,11 @@ export const PharmacySection: React.FC = () => {
 
         <button
           onClick={handleSend}
-          disabled={sending}
+          disabled={sending || locating}
           className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 text-white font-bold py-3 text-sm cursor-pointer disabled:opacity-50"
         >
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          {sending ? 'جارِ الإرسال...' : `إرسال الطلب لـ ${selected.size || 0} صيدلية محددة`}
+          {sending ? 'جارِ الإرسال...' : locating ? 'بنحدد موقعك...' : `إرسال الطلب لـ ${selected.size || 0} صيدلية محددة`}
         </button>
       </div>
 
@@ -644,3 +648,4 @@ const StarPicker: React.FC<{ label: string; value: number; onChange: (v: number)
     </div>
   </div>
 );
+
