@@ -67,6 +67,17 @@ export function useNotifications(userId: string | null | undefined) {
     await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds);
   };
 
+  const deleteNotification = async (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    await supabase.from('notifications').delete().eq('id', id);
+  };
+
+  const deleteAllNotifications = async () => {
+    if (!userId || notifications.length === 0) return;
+    setNotifications([]);
+    await supabase.from('notifications').delete().eq('recipient_id', userId);
+  };
+
   useEffect(() => {
     if (!userId) {
       setNotifications([]);
@@ -122,5 +133,5 @@ export function useNotifications(userId: string | null | undefined) {
     };
   }, [userId]);
 
-  return { notifications, unreadCount, permission, requestPermission, markAsRead, markAllAsRead };
+  return { notifications, unreadCount, permission, requestPermission, markAsRead, markAllAsRead, deleteNotification, deleteAllNotifications };
 }
