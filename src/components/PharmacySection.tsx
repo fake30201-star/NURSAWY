@@ -13,6 +13,7 @@ import {
   Clock,
   XCircle,
   Paperclip,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
@@ -273,6 +274,11 @@ export const PharmacySection: React.FC = () => {
     await supabase.from('pharmacy_orders').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', order.id);
   };
 
+  const handleDeleteOrder = async (order: PharmacyOrder) => {
+    await supabase.from('pharmacy_orders').delete().eq('id', order.id);
+    setMyOrders((prev) => prev.filter((o) => o.id !== order.id));
+  };
+
   return (
     <div className="space-y-6 dir-rtl">
       {/* Header */}
@@ -391,7 +397,7 @@ export const PharmacySection: React.FC = () => {
         <div className="space-y-4">
           <h3 className="font-extrabold text-white text-base px-1">طلباتي</h3>
           {myOrders.map((order) => (
-            <PatientOrderCard key={order.id} order={order} pharmacies={pharmacies} onApprove={handleApprove} onCancel={handleCancel} onConfirmReceipt={handleConfirmReceipt} />
+            <PatientOrderCard key={order.id} order={order} pharmacies={pharmacies} onApprove={handleApprove} onCancel={handleCancel} onConfirmReceipt={handleConfirmReceipt} onDelete={handleDeleteOrder} />
           ))}
         </div>
       )}
@@ -405,7 +411,8 @@ const PatientOrderCard: React.FC<{
   onApprove: (o: PharmacyOrder) => void;
   onCancel: (o: PharmacyOrder) => void;
   onConfirmReceipt: (o: PharmacyOrder) => void;
-}> = ({ order, pharmacies, onApprove, onCancel, onConfirmReceipt }) => {
+  onDelete: (o: PharmacyOrder) => void;
+}> = ({ order, pharmacies, onApprove, onCancel, onConfirmReceipt, onDelete }) => {
   const [chatOpen, setChatOpen] = useState(false);
   const [ratingDone, setRatingDone] = useState(false);
   const pharmacy = pharmacies.find((p) => p.id === order.pharmacy_id);
@@ -433,6 +440,18 @@ const PatientOrderCard: React.FC<{
           {status.label}
         </span>
       </div>
+
+      {(order.status === 'delivered' || order.status === 'cancelled' || order.status === 'rejected') && (
+        <button
+          onClick={() => {
+            if (confirm('تأكيد حذف الطلب ده نهائيًا؟')) onDelete(order);
+          }}
+          className="flex items-center gap-1 text-[10px] font-bold text-red-400 hover:text-red-300 cursor-pointer"
+        >
+          <Trash2 className="w-3 h-3" />
+          حذف الطلب
+        </button>
+      )}
 
       {order.request_text && <p className="text-xs text-slate-300">{order.request_text}</p>}
       {order.prescription_url && (
@@ -648,4 +667,3 @@ const StarPicker: React.FC<{ label: string; value: number; onChange: (v: number)
     </div>
   </div>
 );
-
