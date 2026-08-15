@@ -35,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-purple-500/20 shadow-lg shadow-purple-950/30 transition-all dir-rtl overflow-hidden">
+    <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-purple-500/20 shadow-lg shadow-purple-950/30 transition-all dir-rtl">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-2">
         
         {/* Brand (Logo, Title, and M for MADA badge) - Right side */}
