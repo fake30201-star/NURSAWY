@@ -1,6 +1,7 @@
 import React from 'react';
 import { Activity, Stethoscope, Sparkles, Moon, Sun, ShieldCheck, LogOut, Crown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { NotificationBell } from './NotificationBell';
 
 interface HeaderProps {
   activeTab: string;
@@ -15,7 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
   darkMode,
   setDarkMode,
 }) => {
-  const { isLoggedIn, logout, email, isAdmin, fullName, isPharmacy } = useAuth();
+  const { isLoggedIn, logout, email, isAdmin, fullName, isPharmacy, user } = useAuth();
   const navItems = [
     { id: 'home', label: 'الرئيسية' },
     { id: 'dictionary', label: 'القاموس والذكاء الاصطناعي 🩺' },
@@ -90,6 +91,9 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Left Actions (Vertical on mobile, Horizontal on desktop - Compact) */}
         <div className="flex flex-col lg:flex-row items-end lg:items-center gap-1 shrink-0">
           <div className="flex items-center gap-1">
+            {isLoggedIn && (
+              <NotificationBell userId={user?.id} onOpenOrder={() => setActiveTab('pharmacy')} />
+            )}
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-1.5 sm:p-2 rounded-lg bg-slate-900 border border-purple-500/20 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-all cursor-pointer"
