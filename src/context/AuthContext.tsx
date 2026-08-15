@@ -151,6 +151,215 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(newSession);
       if (newSession?.user) {
         loadProfile(newSession.user);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    // فحص إضافي كل مرة يرجع فيها المستخدم للتاب/التطبيق (زي فتح التطبيق تاني بعد ما يكون قافل)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && session?.user) {
+        verifySession(session.user.id);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      listener.subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // متابعة فورية (Realtime): لو حد سجل دخول بنفس الحساب من جهاز تاني، الجهاز ده يتسجل خروج فورًا من غير ما يحتاج يعمل refresh.
+  useEffect(() => {
+    if (!session?.user) return;
+
+    const channel = supabase
+      .channel(`user_sessions_${session.user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'user_sessions',
+          filter: `user_id=eq.${session.user.id}`,
+        },
+        (payload) => {
+          const localToken = localStorage.getItem(SESSION_TOKEN_KEY);
+          const newToken = (payload.new as { session_token?: string })?.session_token;
+          if (newToken && localToken && newToken !== localToken && !kickedOutRef.current) {
+            kickedOutRef.current = true;
+            supabase.auth.signOut().then(() => {
+              localStorage.removeItem(SESSION_TOKEN_KEY);
+              alert('تم تسجيل الدخول بهذا الحساب من جهاز آخر، فتم تسجيل خروجك من هذا الجهاز.');
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.user?.id]);
+
+  const login = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(translateAuthError(error.message));
+    // نحجز الجلسة كـ"الجهاز النشط الوحيد" فقط هنا، عند تسجيل دخول فعلي وصريح من
+    // المستخدم — مش عند أي حدث SIGNED_IN تاني قد يطلقه Supabase تلقائيًا (زي
+    // استعادة الجلسة بعد Refresh للصفحة)، عشان منسجلش خروج المستخدم من نفسه غلط.
+    if (data.user) await claimSession(data.user.id);
+  };
+
+  const register = async (
+    email: string,
+    password: string,
+    fullName: string,
+    role: 'nurse' | 'pharmacy' = 'nurse',
+    pharmacyInfo?: PharmacyRegistrationInfo
+  ) => {
+    const metadata: Record<string, unknown> = { full_name: fullName, role };
+    if (role === 'pharmacy' && pharmacyInfo) {
+      metadata.pharmacy_name = pharmacyInfo.pharmacy_name;
+      metadata.pharmacy_phone = pharmacyInfo.pharmacy_phone;
+      metadata.pharmacy_address = pharmacyInfo.pharmacy_address;
+      metadata.pharmacy_lat = pharmacyInfo.pharmacy_lat;
+      metadata.pharmacy_lng = pharmacyInfo.pharmacy_lng;
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: metadata },
+    });
+    if (error) throw new Error(translateAuthError(error.message));
+
+    // لو التسجيل نجح وفيه جلسة فورية (تأكيد الإيميل غير مفعّل)، ننشئ صف profile مباشرة بكل البيانات.
+    if (data.user && data.session) {
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        email,
+        full_name: fullName,
+        role,
+        pharmacy_name: role === 'pharmacy' ? pharmacyInfo?.pharmacy_name || null : null,
+        pharmacy_phone: role === 'pharmacy' ? pharmacyInfo?.pharmacy_phone || null : null,
+        pharmacy_address: role === 'pharmacy' ? pharmacyInfo?.pharmacy_address || null : null,
+        pharmacy_lat: role === 'pharmacy' ? pharmacyInfo?.pharmacy_lat ?? null : null,
+        pharmacy_lng: role === 'pharmacy' ? pharmacyInfo?.pharmacy_lng ?? null : null,
+      });
+      // نفس منطق تسجيل الدخول: نحجز الجلسة بس لما يبقى فيه دخول فعلي فوري بعد التسجيل.
+      await claimSession(data.user.id);
+    }
+
+    // لو مفيش session فوري، معناه Supabase محتاج تأكيد عبر الإيميل قبل الدخول.
+    return { needsEmailConfirmation: !data.session };
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+  };
+
+  // بيمسح حساب المستخدم نهائيًا (وكل بياناته المرتبطة به) عن طريق دالة
+  // delete_user_account في قاعدة البيانات، وبعدين يسجل خروجه من الجهاز ده.
+  const deleteAccount = async () => {
+    const { error } = await supabase.rpc('delete_user_account');
+    if (error) throw new Error('تعذر حذف الحساب: ' + error.message);
+    await supabase.auth.signOut();
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        isLoggedIn: !!session?.user,
+        user: session?.user ?? null,
+        email: session?.user?.email ?? null,
+        fullName: profile?.full_name ?? null,
+        isAdmin: !!profile?.is_admin,
+        isSubscribed: !!profile?.is_subscribed,
+        role: profile?.role || 'nurse',
+        isPharmacy: profile?.role === 'pharmacy',
+        pharmacyName: profile?.pharmacy_name ?? null,
+        pharmacyPhone: profile?.pharmacy_phone ?? null,
+        pharmacyAddress: profile?.pharmacy_address ?? null,
+        pharmacyLat: profile?.pharmacy_lat ?? null,
+        pharmacyLng: profile?.pharmacy_lng ?? null,
+        loading,
+        login,
+        register,
+        logout,
+        deleteAccount,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+function translateAuthError(message: string): string {
+  const map: Record<string, string> = {
+    'Invalid login credentials': 'الإيميل أو كلمة المرور غلط',
+    'User already registered': 'الإيميل ده مسجل بالفعل، جرب تسجيل الدخول',
+    'Password should be at least 6 characters': 'كلمة المرور لازم تكون 6 حروف على الأقل',
+    'Email not confirmed': 'لازم تأكد إيميلك الأول من الرسالة المرسلة لك',
+  };
+  return map[message] || message;
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth لازم يتستخدم جوه AuthProvider');
+  return ctx;
+}
+
+  // بيسجَّل الجهاز ده كـ"الجهاز النشط الوحيد" لهذا الحساب، ويحفظ توكن مميز محليًا.
+  const claimSession = async (userId: string) => {
+    const token = crypto.randomUUID();
+    localStorage.setItem(SESSION_TOKEN_KEY, token);
+    kickedOutRef.current = false;
+    await supabase.from('user_sessions').upsert({
+      user_id: userId,
+      session_token: token,
+      updated_at: new Date().toISOString(),
+    });
+  };
+
+  // بيتأكد إن التوكن المحفوظ محليًا لسه هو نفسه المسجل في قاعدة البيانات، وإلا يسجل خروج فورًا.
+  const verifySession = async (userId: string) => {
+    const localToken = localStorage.getItem(SESSION_TOKEN_KEY);
+    if (!localToken) return;
+
+    const { data } = await supabase
+      .from('user_sessions')
+      .select('session_token')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (data && data.session_token !== localToken && !kickedOutRef.current) {
+      kickedOutRef.current = true;
+      await supabase.auth.signOut();
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      alert('تم تسجيل الدخول بهذا الحساب من جهاز آخر، فتم تسجيل خروجك من هذا الجهاز.');
+    }
+  };
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      if (data.session?.user) {
+        loadProfile(data.session.user);
+        verifySession(data.session.user.id);
+      }
+      setLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      setSession(newSession);
+      if (newSession?.user) {
+        loadProfile(newSession.user);
         if (event === 'SIGNED_IN') {
           claimSession(newSession.user.id);
         }
