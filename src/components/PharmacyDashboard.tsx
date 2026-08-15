@@ -77,6 +77,11 @@ export const PharmacyDashboard: React.FC = () => {
     await supabase.from('pharmacy_orders').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id);
   };
 
+  const deleteOrder = async (id: string) => {
+    await supabase.from('pharmacy_orders').delete().eq('id', id);
+    setOrders((prev) => prev.filter((o) => o.id !== id));
+  };
+
   const addRep = async () => {
     if (!user || !repName.trim() || !repPhone.trim()) return;
     const { data } = await supabase
@@ -149,7 +154,7 @@ export const PharmacyDashboard: React.FC = () => {
         <div className="space-y-4">
           {orders.length === 0 && <p className="text-sm text-slate-500 text-center py-10">لا توجد أوردرات حتى الآن.</p>}
           {orders.map((order) => (
-            <PharmacyOrderCard key={order.id} order={order} reps={reps} onUpdate={updateOrder} />
+            <PharmacyOrderCard key={order.id} order={order} reps={reps} onUpdate={updateOrder} onDelete={deleteOrder} />
           ))}
         </div>
       )}
@@ -229,7 +234,8 @@ const PharmacyOrderCard: React.FC<{
   order: PharmacyOrder;
   reps: PharmacyRep[];
   onUpdate: (id: string, fields: Partial<PharmacyOrder>) => void;
-}> = ({ order, reps, onUpdate }) => {
+  onDelete: (id: string) => void;
+}> = ({ order, reps, onUpdate, onDelete }) => {
   const [price, setPrice] = useState(order.price?.toString() || '');
   const [chatOpen, setChatOpen] = useState(false);
 
@@ -243,6 +249,18 @@ const PharmacyOrderCard: React.FC<{
           {STATUS_LABEL[order.status]}
         </span>
       </div>
+
+      {(order.status === 'delivered' || order.status === 'cancelled' || order.status === 'rejected') && (
+        <button
+          onClick={() => {
+            if (confirm('تأكيد حذف الطلب ده نهائيًا؟')) onDelete(order.id);
+          }}
+          className="flex items-center gap-1 text-[10px] font-bold text-red-400 hover:text-red-300 cursor-pointer"
+        >
+          <XCircle className="w-3 h-3" />
+          حذف الطلب
+        </button>
+      )}
 
       {order.request_text && <p className="text-sm text-slate-200">{order.request_text}</p>}
       {order.prescription_url && (
