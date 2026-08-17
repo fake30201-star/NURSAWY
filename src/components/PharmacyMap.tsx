@@ -21,6 +21,7 @@ interface PharmacyMapProps {
   markers: MapMarker[];
   zoom?: number;
   heightClass?: string;
+  centerLabel?: string;
 }
 
 const COLOR_HEX: Record<string, string> = {
@@ -40,7 +41,7 @@ function buildIcon(color: string) {
 }
 
 // خريطة تفاعلية بسيطة تعتمد على Leaflet + OpenStreetMap (مجانية بالكامل، بدون مفتاح API).
-export const PharmacyMap: React.FC<PharmacyMapProps> = ({ centerLat, centerLng, markers, zoom = 13, heightClass = 'h-72' }) => {
+export const PharmacyMap: React.FC<PharmacyMapProps> = ({ centerLat, centerLng, markers, zoom = 13, heightClass = 'h-72', centerLabel = 'موقعك الحالي' }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersLayerRef = useRef<any>(null);
@@ -82,9 +83,9 @@ export const PharmacyMap: React.FC<PharmacyMapProps> = ({ centerLat, centerLng, 
     if (!mapRef.current || !markersLayerRef.current || !window.L) return;
     markersLayerRef.current.clearLayers();
 
-    // علامة موقعي الحالي
+    // علامة الموقع المركزي (موقعي الحالي أو موقع طرف آخر، حسب centerLabel)
     window.L.marker([centerLat, centerLng], { icon: buildIcon('cyan') })
-      .bindPopup('موقعك الحالي')
+      .bindPopup(centerLabel)
       .addTo(markersLayerRef.current);
 
     markers.forEach((m) => {
@@ -95,7 +96,7 @@ export const PharmacyMap: React.FC<PharmacyMapProps> = ({ centerLat, centerLng, 
         marker.on('click', m.onClick);
       }
     });
-  }, [markers, centerLat, centerLng]);
+  }, [markers, centerLat, centerLng, centerLabel]);
 
   return (
     <div className={`w-full ${heightClass} rounded-2xl overflow-hidden border border-emerald-500/20`}>
