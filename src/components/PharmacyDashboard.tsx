@@ -11,10 +11,12 @@ import {
   Users,
   Phone,
   MapPin,
+  Navigation,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { OrderChat } from './PharmacySection';
+import { PharmacyMap } from './PharmacyMap';
 import { PharmacyOrder, PharmacyOrderStatus, PharmacyRep, PharmacyRating } from '../types';
 
 const STATUS_STEPS: PharmacyOrderStatus[] = ['pending', 'priced', 'confirmed', 'preparing', 'out_for_delivery', 'delivered'];
@@ -238,8 +240,10 @@ const PharmacyOrderCard: React.FC<{
 }> = ({ order, reps, onUpdate, onDelete }) => {
   const [price, setPrice] = useState(order.price?.toString() || '');
   const [chatOpen, setChatOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
 
   const stepIndex = STATUS_STEPS.indexOf(order.status);
+  const hasLocation = order.patient_lat != null && order.patient_lng != null;
 
   return (
     <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3">
@@ -268,10 +272,43 @@ const PharmacyOrderCard: React.FC<{
           عرض صورة الروشتة
         </a>
       )}
-      {order.patient_address && (
-        <p className="text-[11px] text-slate-400 flex items-center gap-1">
-          <MapPin className="w-3 h-3" /> {order.patient_address}
-        </p>
+      {(order.patient_address || hasLocation) && (
+        <div className="space-y-2">
+          {order.patient_address && (
+            <p className="text-[11px] text-slate-400 flex items-center gap-1">
+              <MapPin className="w-3 h-3" /> {order.patient_address}
+            </p>
+          )}
+          {hasLocation && (
+            <div className="flex items-center gap-2">
+              <a
+                href={`https://www.google.com/maps?q=${order.patient_lat},${order.patient_lng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-300 hover:text-cyan-200"
+              >
+                <Navigation className="w-3.5 h-3.5" />
+                فتح موقع المريض في خرائط Google
+              </a>
+              <button
+                onClick={() => setMapOpen((v) => !v)}
+                className="text-[11px] font-bold text-slate-400 hover:text-slate-200 cursor-pointer"
+              >
+                {mapOpen ? 'إخفاء الخريطة' : 'عرض الخريطة هنا'}
+              </button>
+            </div>
+          )}
+          {hasLocation && mapOpen && (
+            <PharmacyMap
+              centerLat={order.patient_lat as number}
+              centerLng={order.patient_lng as number}
+              markers={[]}
+              heightClass="h-56"
+              zoom={15}
+              centerLabel="موقع المريض"
+            />
+          )}
+        </div>
       )}
 
       {/* Pending: set price or reject */}
