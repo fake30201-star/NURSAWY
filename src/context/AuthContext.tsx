@@ -39,6 +39,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string, extra: RegisterExtra) => Promise<{ needsEmailConfirmation: boolean }>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -234,6 +235,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem(SESSION_TOKEN_KEY);
   };
 
+  const deleteAccount = async () => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (!currentSession) throw new Error('لازم تكون مسجل دخول');
+
+    const { error } = await supabase.rpc('delete_my_account');
+    if (error) throw new Error('حصل خطأ أثناء حذف الحساب: ' + error.message);
+
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+    await supabase.auth.signOut();
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -254,6 +266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
+        deleteAccount,
       }}
     >
       {children}
