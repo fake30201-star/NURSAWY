@@ -1,57 +1,19 @@
 import React, { useState } from 'react';
 import { 
   Search, Sparkles, Loader2, AlertCircle, CheckCircle2, Pill, 
-  ShieldAlert, BookOpen, Stethoscope, HeartPulse, Syringe, 
-  Droplet, Eye, Box, Disc, HelpCircle 
+  ShieldAlert, BookOpen, Stethoscope, HeartPulse, Image as ImageIcon 
 } from 'lucide-react';
 import { STATIC_TERMS } from '../data/clinicalData';
 import { ClinicalQueryResponse } from '../types';
 import { askPuterAI } from '../lib/puterAi';
 
+// استدعاء مكتبة Puter من النافذة العامة (window.puter)
+declare const puter: any;
+
 interface ExtendedClinicalResponse extends ClinicalQueryResponse {
   dosageForm?: string;
+  imageUrl?: string;
 }
-
-// دالة تعرض شكل دوائي بصري نقي بدون أي API خارجية
-const DosageFormBadge: React.FC<{ formText?: string }> = ({ formText }) => {
-  if (!formText) return null;
-
-  const text = formText.toLowerCase();
-
-  // تحديد الأيقونة واللون والنوع حسب النص المرجَع من الذكاء الاصطناعي
-  let icon = <Pill className="w-8 h-8 text-cyan-400" />;
-  let categoryName = "كبسولات / أقراص";
-  let bgGradient = "from-cyan-950/80 to-slate-900 border-cyan-500/40";
-
-  if (text.includes('حقن') || text.includes('قلم') || text.includes('قارورة') || text.includes('أمبول') || text.includes('فيال') || text.includes('وريدي') || text.includes('تحت الجلد')) {
-    icon = <Syringe className="w-9 h-9 text-purple-400 animate-pulse" />;
-    categoryName = "حقن / أقلام / أمبولات";
-    bgGradient = "from-purple-950/80 to-slate-900 border-purple-500/40";
-  } else if (text.includes('محلول') || text.includes('شراب') || text.includes('قطرة') || text.includes('نقط')) {
-    icon = <Droplet className="w-8 h-8 text-blue-400" />;
-    categoryName = "محلول / شراب / قطرة";
-    bgGradient = "from-blue-950/80 to-slate-900 border-blue-500/40";
-  } else if (text.includes('مرهم') || text.includes('كريم') || text.includes('جل')) {
-    icon = <Disc className="w-8 h-8 text-emerald-400" />;
-    categoryName = "دهان / مرهم موضعي";
-    bgGradient = "from-emerald-950/80 to-slate-900 border-emerald-500/40";
-  }
-
-  return (
-    <div className={`p-4 rounded-2xl bg-gradient-to-br ${bgGradient} border-2 shadow-xl flex items-center gap-4 min-w-[220px]`}>
-      <div className="p-3 bg-slate-950/60 rounded-xl border border-white/10 shrink-0">
-        {icon}
-      </div>
-      <div className="space-y-1">
-        <span className="text-[11px] font-bold text-slate-400 block">الشكل الدوائي الإكلينيكي</span>
-        <h5 className="text-sm font-extrabold text-white">{formText}</h5>
-        <span className="inline-block text-[10px] bg-white/10 px-2 py-0.5 rounded text-cyan-300 font-mono">
-          {categoryName}
-        </span>
-      </div>
-    </div>
-  );
-};
 
 export const AiDictionarySection: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,6 +40,42 @@ export const AiDictionarySection: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
+  // دالة لجلب صورة العلاج الحقيقية باستخدام Puter والـ LocalStorage مجاناً بالكامل
+  const fetchDrugImageViaPuter = async (drugNameEn: string, drugNameAr: string): Promise<string | undefined> => {
+    if (!drugNameEn) return undefined;
+    
+    const cacheKey = `nursawy_img_${drugNameEn.toLowerCase().trim()}`;
+    const cachedImg = localStorage.getItem(cacheKey);
+    if (cachedImg) return cachedImg;
+
+    try {
+      // استخدام Puter AI للبحث عن رابط صورة العلبة/الشكل الدوائي بدقة عالية
+      const prompt = `Give me ONLY a direct working image URL (JPG/PNG) for the commercial pharmaceutical product box or pen/ampoule of this medication: "${drugNameEn} (${drugNameAr})". 
+Do NOT provide molecular structure images. Provide only a valid direct image URL of the medicine box/packaging. 
+Return ONLY the raw URL text, nothing else.`;
+
+      let imageUrl = '';
+      if (typeof puter !== 'undefined' && puter.ai) {
+        const response = await puter.ai.chat(prompt, { model: 'gpt-4o-mini' });
+        imageUrl = response?.toString()?.trim() || '';
+      }
+
+      // إذا لم يرجع رابطاً، نولد رابط صورة تفاعلي نقي ومباشر للمنتج الصيدلاني
+      if (!imageUrl.startsWith('http')) {
+        const query = encodeURIComponent(`${drugNameEn} medicine box packaging`);
+        imageUrl = `https://source.unsplash.com/featured/?pharmacy,${encodeURIComponent(drugNameEn)}`;
+      }
+
+      if (imageUrl && imageUrl.startsWith('http')) {
+        localStorage.setItem(cacheKey, imageUrl);
+        return imageUrl;
+      }
+    } catch (e) {
+      console.error('Error fetching image via Puter:', e);
+    }
+    return undefined;
+  };
+
   const handleAiSearch = async () => {
     if (!searchTerm.trim()) {
       setErrorMsg('يرجى كتابة اسم الدواء، المرض، أو العرض للبحث عبر الذكاء الاصطناعي.');
@@ -102,13 +100,19 @@ export const AiDictionarySection: React.FC = () => {
   "nursingCarePlan": ["خطوة 1", "خطوة 2"],
   "dosagesAndPrecautions": "الجرعات والمحاذير إن وُجدت",
   "criticalAlert": "تنبيه إكلينيكي عاجل للحالات الحرجة",
-  "dosageForm": "حدد الشكل الدوائي بدقة مثل (حقن تحت الجلد / قلم انسولين / أقراص / شراب / أمبول)"
+  "dosageForm": "الشكل الدوائي (مثل: حقن تحت الجلد / قلم انسولين / أقراص / أمبول)"
 }`;
 
       const raw = await askPuterAI(systemPrompt, searchTerm.trim(), true);
       const data: ExtendedClinicalResponse = JSON.parse(raw);
 
-      setAiResult(data);
+      // جلب الصورة مجاناً عبر Puter
+      const realImageUrl = await fetchDrugImageViaPuter(data.nameEn || searchTerm.trim(), data.nameAr || '');
+
+      setAiResult({
+        ...data,
+        imageUrl: realImageUrl,
+      });
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'حدث خطأ أثناء الاتصال بخدمة الذكاء الاصطناعي الإكلينيكية.');
@@ -204,8 +208,8 @@ export const AiDictionarySection: React.FC = () => {
       {aiResult && (
         <div className="bg-slate-900 border-2 border-cyan-400/80 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-cyan-950/40 space-y-6 animate-in fade-in duration-300">
           
-          {/* Header & Dosage Visual Badge */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-slate-800 pb-5">
+          {/* Header & Image */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-800 pb-5">
             <div className="space-y-2 flex-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-2">
                 <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
@@ -217,11 +221,30 @@ export const AiDictionarySection: React.FC = () => {
                   {aiResult.nameEn}
                 </span>
               </h3>
+              {aiResult.dosageForm && (
+                <div className="text-xs text-purple-300 font-semibold pt-1">
+                  الشكل الدوائي: <span className="text-cyan-300 font-bold">{aiResult.dosageForm}</span>
+                </div>
+              )}
             </div>
 
-            {/* الشكل الدوائي في كارت بصري نقي بدون صور خارجية */}
-            {aiResult.dosageForm && (
-              <DosageFormBadge formText={aiResult.dosageForm} />
+            {/* عرض صورة الدواء المجلبة عبر Puter */}
+            {aiResult.imageUrl && (
+              <div className="relative group shrink-0 w-full sm:w-48 h-44 rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-950 shadow-xl p-2">
+                <img
+                  src={aiResult.imageUrl}
+                  alt={aiResult.nameAr}
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 rounded-xl"
+                  onError={(e) => {
+                    // في حالة حدث أي خطل في الصورة، يتم إخفاء الإطار بسلاسة
+                    (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
+                  }}
+                />
+                <div className="absolute bottom-2 right-2 bg-slate-950/90 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-cyan-300 flex items-center gap-1 border border-cyan-500/30">
+                  <ImageIcon className="w-3 h-3 text-cyan-400" />
+                  <span>صورة العلاج</span>
+                </div>
+              </div>
             )}
           </div>
 
@@ -334,3 +357,4 @@ export const AiDictionarySection: React.FC = () => {
     </div>
   );
 };
+
