@@ -37,67 +37,107 @@ export const AiDictionarySection: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
-  // يحاول جلب صورة الملخّص (thumbnail/originalimage) لعنوان صفحة ويكيبيديا محدد بالضبط
-  const fetchSummaryImage = async (title: string): Promise<string | null> => {
+  // كلمات مفتاحية نستهدفها في عنوان/وصف الملف عشان نتأكد إنها "عبوة/علبة دواء" حقيقية
+  const PACKAGING_HINTS = ['box', 'pack', 'package', 'packaging', 'carton', 'blister', 'bottle', 'vial', 'strip', 'label'];
+  // كلمات نستبعدها لأنها بتدل على صور تركيب كيميائي/رسم بياني وليست صورة منتج
+  const EXCLUDE_HINTS = [
+    'structure', 'skeletal', 'molecule', 'molecular', 'formula', 'smiles',
+    'chembox', 'diagram', 'chemical structure', 'synthesis', 'reaction',
+  ];
+
+  const isLikelyPackagingTitle = (title: string) => {
+    const t = title.toLowerCase();
+    if (EXCLUDE_HINTS.some((bad) => t.includes(bad))) return false;
+    return PACKAGING_HINTS.some((good) => t.includes(good));
+  };
+
+  // يبحث في ملفات Wikimedia Commons (صور رفعها مستخدمون فعليًا، غالبًا صور واقعية للعبوات)
+  const searchCommonsFiles = async (query: string): Promise<string[]> => {
     try {
-      const response = await fetch(
-        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
-      );
-      if (!response.ok) return null;
+      const url =
+        `https://commons.wikimedia.org/w/api.php?action=query&list=search&srnamespace=6` +
+        `&srlimit=10&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+      const response = await fetch(url);
+      if (!response.ok) return [];
       const data = await response.json();
-      // تجاهل صفحات توضيح المعنى (disambiguation) لأنها بلا صورة دواء حقيقية
-      if (data.type === 'disambiguation') return null;
-      return data.originalimage?.source || data.thumbnail?.source || null;
+      const results = data?.query?.search || [];
+      return results.map((r: any) => r.title as string);
     } catch {
-      return null;
+      return [];
     }
   };
 
-  // يستخدم محرك بحث ويكيبيديا (opensearch) للعثور على أقرب عنوان صفحة مطابق فعليًا
-  const searchWikiTitle = async (query: string): Promise<string | null> => {
+  // يجلب رابط الصورة الفعلي (thumbnail) لملف Commons معيّن بعرض مناسب للعرض
+  const fetchCommonsFileUrl = async (fileTitle: string): Promise<string | null> => {
     try {
       const url =
-        `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}` +
-        `&limit=1&namespace=0&format=json&origin=*`;
+        `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(fileTitle)}` +
+        `&prop=imageinfo&iiprop=url&iiurlwidth=500&format=json&origin=*`;
       const response = await fetch(url);
       if (!response.ok) return null;
       const data = await response.json();
-      const title = data?.[1]?.[0];
-      return title || null;
+      const pages = data?.query?.pages || {};
+      const page: any = Object.values(pages)[0];
+      const info = page?.imageinfo?.[0];
+      return info?.thumburl || info?.url || null;
     } catch {
       return null;
     }
   };
 
-  // دالة مجانية 100% تجلب أدق صورة ممكنة للدواء المحدّد من ويكيبيديا
-  // بترتيب أولوية: الاسم الإنجليزي كامل -> بحث عن أقرب عنوان له -> أول كلمة فقط -> بحث عن أقرب عنوان لأول كلمة
+  // يحاول العثور على أول ملف مطابق لصورة عبوة حقيقية ضمن نتائج بحث معينة
+  const findPackagingImageInResults = async (titles: string[]): Promise<string | null> => {
+    // أولوية للملفات اللي عنوانها بيدل صراحةً على عبوة/علبة/شريط
+    const prioritized = [...titles].sort((a, b) => {
+      const aGood = isLikelyPackagingTitle(a) ? 1 : 0;
+      const bGood = isLikelyPackagingTitle(b) ? 1 : 0;
+      return bGood - aGood;
+    });
+
+    for (const title of prioritized) {
+      const lower = title.toLowerCase();
+      if (EXCLUDE_HINTS.some((bad) => lower.includes(bad))) continue;
+      const imageUrl = await fetchCommonsFileUrl(title);
+      if (imageUrl) return imageUrl;
+    }
+    return null;
+  };
+
+  // دالة مجانية 100% تجلب صورة عبوة/علبة الدواء الفعلية (مش التركيب الكيميائي) من Wikimedia Commons
   const fetchDrugImageFromWiki = async (drugNameEn: string): Promise<string | null> => {
     const cleanFull = drugNameEn.trim();
     const firstWord = cleanFull.split(' ')[0];
 
-    const attempts: (() => Promise<string | null>)[] = [
-      () => fetchSummaryImage(cleanFull),
-      async () => {
-        const title = await searchWikiTitle(cleanFull);
-        return title ? fetchSummaryImage(title) : null;
-      },
+    // نبني استعلامات بترتيب الأولوية: اسم كامل + كلمة عبوة، ثم أول كلمة + كلمة عبوة، ثم اسم عام بدون تخصيص
+    const queries = [
+      `${cleanFull} box`,
+      `${cleanFull} package`,
+      `${cleanFull} tablets box`,
+      `${cleanFull} blister pack`,
     ];
 
     if (firstWord && firstWord !== cleanFull) {
-      attempts.push(() => fetchSummaryImage(firstWord));
-      attempts.push(async () => {
-        const title = await searchWikiTitle(firstWord);
-        return title ? fetchSummaryImage(title) : null;
-      });
+      queries.push(`${firstWord} box`, `${firstWord} package`);
     }
 
-    for (const attempt of attempts) {
+    for (const query of queries) {
       try {
-        const image = await attempt();
+        const titles = await searchCommonsFiles(query);
+        if (titles.length === 0) continue;
+        const image = await findPackagingImageInResults(titles);
         if (image) return image;
       } catch (e) {
-        console.error('Error fetching wiki image:', e);
+        console.error('Error searching Commons for packaging image:', e);
       }
+    }
+
+    // fallback أخير: أي صورة عن الدواء من Commons حتى لو مش موصوفة صراحة كعبوة، لكن نستبعد التركيب الكيميائي
+    try {
+      const titles = await searchCommonsFiles(cleanFull || firstWord);
+      const image = await findPackagingImageInResults(titles);
+      if (image) return image;
+    } catch (e) {
+      console.error('Error in fallback Commons search:', e);
     }
 
     return null;
