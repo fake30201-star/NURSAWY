@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
-import { Search, Sparkles, Loader2, AlertCircle, CheckCircle2, Pill, ShieldAlert, BookOpen, Stethoscope, HeartPulse } from 'lucide-react';
+import { Search, Sparkles, Loader2, AlertCircle, CheckCircle2, Pill, ShieldAlert, BookOpen, Stethoscope, HeartPulse, Image as ImageIcon } from 'lucide-react';
 import { STATIC_TERMS } from '../data/clinicalData';
 import { ClinicalQueryResponse } from '../types';
 import { askPuterAI } from '../lib/puterAi';
+
+// Interface تمديد لنوع البيانات ليشمل الصورة
+interface ClinicalQueryResponseWithImage extends ClinicalQueryResponse {
+  imageUrl?: string;
+}
 
 export const AiDictionarySection: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [loading, setLoading] = useState(false);
-  const [aiResult, setAiResult] = useState<ClinicalQueryResponse | null>(null);
+  const [aiResult, setAiResult] = useState<ClinicalQueryResponseWithImage | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Filter static terms
   const categories = [
     { id: 'all', label: 'الكل' },
     { id: 'الأدوية والعلاجيات', label: 'الأدوية والجرعات' },
@@ -29,6 +33,20 @@ export const AiDictionarySection: React.FC = () => {
       term.nameEn.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  // دالة جلب صورة العلاج/المرض تلقائياً عبر Wikipedia API
+  const fetchDrugImage = async (queryEn: string): Promise<string | undefined> => {
+    try {
+      const res = await fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(queryEn)}`
+      );
+      if (!res.ok) return undefined;
+      const data = await res.json();
+      return data.thumbnail?.source;
+    } catch {
+      return undefined;
+    }
+  };
 
   const handleAiSearch = async () => {
     if (!searchTerm.trim()) {
@@ -57,8 +75,15 @@ export const AiDictionarySection: React.FC = () => {
 }`;
 
       const raw = await askPuterAI(systemPrompt, searchTerm.trim(), true);
-      const data = JSON.parse(raw);
-      setAiResult(data);
+      const data: ClinicalQueryResponse = JSON.parse(raw);
+
+      // جلب الصورة بناءً على الاسم الإنجليزي أو البحث المدخل
+      const imgUrl = await fetchDrugImage(data.nameEn || searchTerm.trim());
+
+      setAiResult({
+        ...data,
+        imageUrl: imgUrl,
+      });
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'حدث خطأ أثناء الاتصال بخدمة الذكاء الاصطناعي الإكلينيكية.');
@@ -154,20 +179,35 @@ export const AiDictionarySection: React.FC = () => {
       {aiResult && (
         <div className="bg-slate-900 border-2 border-cyan-400/80 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-cyan-950/40 space-y-6 animate-in fade-in duration-300">
           
-          {/* Header */}
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800 pb-5">
-            <div>
+          {/* Header with Image */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-slate-800 pb-5">
+            <div className="space-y-2 flex-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-2">
                 <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                 <span>تقرير الذكاء الاصطناعي الأونلاين - {aiResult.category}</span>
               </div>
-              <h3 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
+              <h3 className="text-2xl sm:text-3xl font-black text-white flex flex-wrap items-center gap-3">
                 <span>{aiResult.nameAr}</span>
                 <span className="text-sm sm:text-lg font-mono text-cyan-400 bg-cyan-950/50 px-3 py-1 rounded-lg border border-cyan-500/20">
                   {aiResult.nameEn}
                 </span>
               </h3>
             </div>
+
+            {/* Display Image if Available */}
+            {aiResult.imageUrl && (
+              <div className="relative group shrink-0 w-full md:w-44 h-36 rounded-2xl overflow-hidden border border-cyan-500/30 bg-slate-950 shadow-lg">
+                <img
+                  src={aiResult.imageUrl}
+                  alt={aiResult.nameAr}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute bottom-2 right-2 bg-slate-950/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] text-cyan-300 flex items-center gap-1 border border-cyan-500/20">
+                  <ImageIcon className="w-3 h-3" />
+                  <span>صورة توضيحية</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Definition */}
