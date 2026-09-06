@@ -1,13 +1,57 @@
 import React, { useState } from 'react';
-import { Search, Sparkles, Loader2, AlertCircle, CheckCircle2, Pill, ShieldAlert, BookOpen, Stethoscope, HeartPulse, Image as ImageIcon } from 'lucide-react';
+import { 
+  Search, Sparkles, Loader2, AlertCircle, CheckCircle2, Pill, 
+  ShieldAlert, BookOpen, Stethoscope, HeartPulse, Syringe, 
+  Droplet, Eye, Box, Disc, HelpCircle 
+} from 'lucide-react';
 import { STATIC_TERMS } from '../data/clinicalData';
 import { ClinicalQueryResponse } from '../types';
 import { askPuterAI } from '../lib/puterAi';
 
 interface ExtendedClinicalResponse extends ClinicalQueryResponse {
   dosageForm?: string;
-  imageUrl?: string;
 }
+
+// دالة تعرض شكل دوائي بصري نقي بدون أي API خارجية
+const DosageFormBadge: React.FC<{ formText?: string }> = ({ formText }) => {
+  if (!formText) return null;
+
+  const text = formText.toLowerCase();
+
+  // تحديد الأيقونة واللون والنوع حسب النص المرجَع من الذكاء الاصطناعي
+  let icon = <Pill className="w-8 h-8 text-cyan-400" />;
+  let categoryName = "كبسولات / أقراص";
+  let bgGradient = "from-cyan-950/80 to-slate-900 border-cyan-500/40";
+
+  if (text.includes('حقن') || text.includes('قلم') || text.includes('قارورة') || text.includes('أمبول') || text.includes('فيال') || text.includes('وريدي') || text.includes('تحت الجلد')) {
+    icon = <Syringe className="w-9 h-9 text-purple-400 animate-pulse" />;
+    categoryName = "حقن / أقلام / أمبولات";
+    bgGradient = "from-purple-950/80 to-slate-900 border-purple-500/40";
+  } else if (text.includes('محلول') || text.includes('شراب') || text.includes('قطرة') || text.includes('نقط')) {
+    icon = <Droplet className="w-8 h-8 text-blue-400" />;
+    categoryName = "محلول / شراب / قطرة";
+    bgGradient = "from-blue-950/80 to-slate-900 border-blue-500/40";
+  } else if (text.includes('مرهم') || text.includes('كريم') || text.includes('جل')) {
+    icon = <Disc className="w-8 h-8 text-emerald-400" />;
+    categoryName = "دهان / مرهم موضعي";
+    bgGradient = "from-emerald-950/80 to-slate-900 border-emerald-500/40";
+  }
+
+  return (
+    <div className={`p-4 rounded-2xl bg-gradient-to-br ${bgGradient} border-2 shadow-xl flex items-center gap-4 min-w-[220px]`}>
+      <div className="p-3 bg-slate-950/60 rounded-xl border border-white/10 shrink-0">
+        {icon}
+      </div>
+      <div className="space-y-1">
+        <span className="text-[11px] font-bold text-slate-400 block">الشكل الدوائي الإكلينيكي</span>
+        <h5 className="text-sm font-extrabold text-white">{formText}</h5>
+        <span className="inline-block text-[10px] bg-white/10 px-2 py-0.5 rounded text-cyan-300 font-mono">
+          {categoryName}
+        </span>
+      </div>
+    </div>
+  );
+};
 
 export const AiDictionarySection: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,26 +78,6 @@ export const AiDictionarySection: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
-  // دالة برمجة مضمونة لجلب صورة حقيقية بناءً على الاسم العلمي/الإنجليزي للدواء
-  const fetchDrugImage = async (drugNameEn: string): Promise<string | undefined> => {
-    if (!drugNameEn) return undefined;
-    try {
-      // تنظيف الاسم للحصول على الكلمة الأساسية للدواء
-      const cleanName = drugNameEn.split(' ')[0].trim();
-      const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanName)}`);
-      
-      if (res.ok) {
-        const data = await res.json();
-        if (data.thumbnail?.source) {
-          return data.thumbnail.source;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to fetch image:', e);
-    }
-    return undefined;
-  };
-
   const handleAiSearch = async () => {
     if (!searchTerm.trim()) {
       setErrorMsg('يرجى كتابة اسم الدواء، المرض، أو العرض للبحث عبر الذكاء الاصطناعي.');
@@ -66,31 +90,25 @@ export const AiDictionarySection: React.FC = () => {
 
     try {
       const systemPrompt = `أنت المساعد الطبي والإكلينيكي التمريضي الذكي لمنصة Nursawy.
-بصفتك استشارياً في التمريض الإكلينيكي والعناية المركزة والطوارئ، قدم تقريراً طبياً وتمريضياً دقيقاً باللغة العربية عن المصطلح أو الدواء المطلوب.
+قدم تقريراً طبياً وتمريضياً دقيقاً باللغة العربية عن الدواء أو المصطلح المطلوب.
 
 رد بصيغة JSON فقط بالمفاتيح التالية بالضبط:
 {
   "nameAr": "الاسم بالعربية",
-  "nameEn": "الاسم الإنجليزي/العلمي بدقة (كلمة أو كلمتين فقط مثل Insulin, Paracetamol, Ceftriaxone)",
+  "nameEn": "الاسم الإنجليزي/العلمي بدقة",
   "category": "التصنيف الطبي",
   "definition": "الوصف والآلية المرضية",
   "symptomsAndSigns": "الأعراض والمؤشرات الإكلينيكية",
   "nursingCarePlan": ["خطوة 1", "خطوة 2"],
   "dosagesAndPrecautions": "الجرعات والمحاذير إن وُجدت",
   "criticalAlert": "تنبيه إكلينيكي عاجل للحالات الحرجة",
-  "dosageForm": "الشكل الدوائي (مثل: أمبول حقن، أقراص، مرهم)"
+  "dosageForm": "حدد الشكل الدوائي بدقة مثل (حقن تحت الجلد / قلم انسولين / أقراص / شراب / أمبول)"
 }`;
 
       const raw = await askPuterAI(systemPrompt, searchTerm.trim(), true);
       const data: ExtendedClinicalResponse = JSON.parse(raw);
 
-      // جلب صورة الدواء الحقيقية عبر Wikipedia REST API
-      const realImageUrl = await fetchDrugImage(data.nameEn || searchTerm.trim());
-
-      setAiResult({
-        ...data,
-        imageUrl: realImageUrl,
-      });
+      setAiResult(data);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'حدث خطأ أثناء الاتصال بخدمة الذكاء الاصطناعي الإكلينيكية.');
@@ -186,8 +204,8 @@ export const AiDictionarySection: React.FC = () => {
       {aiResult && (
         <div className="bg-slate-900 border-2 border-cyan-400/80 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-cyan-950/40 space-y-6 animate-in fade-in duration-300">
           
-          {/* Header & Image */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-800 pb-5">
+          {/* Header & Dosage Visual Badge */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-slate-800 pb-5">
             <div className="space-y-2 flex-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-2">
                 <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
@@ -199,26 +217,11 @@ export const AiDictionarySection: React.FC = () => {
                   {aiResult.nameEn}
                 </span>
               </h3>
-              {aiResult.dosageForm && (
-                <div className="text-xs text-purple-300 font-semibold pt-1">
-                  الشكل الدوائي: <span className="text-cyan-300 font-bold">{aiResult.dosageForm}</span>
-                </div>
-              )}
             </div>
 
-            {/* عرض صورة العلاج الحقيقية */}
-            {aiResult.imageUrl && (
-              <div className="relative group shrink-0 w-full sm:w-44 h-40 rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-950 shadow-xl p-2">
-                <img
-                  src={aiResult.imageUrl}
-                  alt={aiResult.nameAr}
-                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 rounded-xl"
-                />
-                <div className="absolute bottom-2 right-2 bg-slate-950/90 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-cyan-300 flex items-center gap-1 border border-cyan-500/30">
-                  <ImageIcon className="w-3 h-3 text-cyan-400" />
-                  <span>صورة العلاج</span>
-                </div>
-              </div>
+            {/* الشكل الدوائي في كارت بصري نقي بدون صور خارجية */}
+            {aiResult.dosageForm && (
+              <DosageFormBadge formText={aiResult.dosageForm} />
             )}
           </div>
 
@@ -331,4 +334,3 @@ export const AiDictionarySection: React.FC = () => {
     </div>
   );
 };
-
