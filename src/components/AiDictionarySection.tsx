@@ -37,20 +37,70 @@ export const AiDictionarySection: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
-  // دالة مجانية 100% تجلب الصورة الحقيقية والمطابقة للدواء المحدّد من ويكيبيديا
-  const fetchDrugImageFromWiki = async (drugNameEn: string): Promise<string | null> => {
+  // يحاول جلب صورة الملخّص (thumbnail/originalimage) لعنوان صفحة ويكيبيديا محدد بالضبط
+  const fetchSummaryImage = async (title: string): Promise<string | null> => {
     try {
-      const cleanName = drugNameEn.trim().split(' ')[0];
       const response = await fetch(
-        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanName)}`
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
       );
       if (!response.ok) return null;
       const data = await response.json();
-      return data.thumbnail?.source || data.originalimage?.source || null;
-    } catch (e) {
-      console.error('Error fetching wiki image:', e);
+      // تجاهل صفحات توضيح المعنى (disambiguation) لأنها بلا صورة دواء حقيقية
+      if (data.type === 'disambiguation') return null;
+      return data.originalimage?.source || data.thumbnail?.source || null;
+    } catch {
       return null;
     }
+  };
+
+  // يستخدم محرك بحث ويكيبيديا (opensearch) للعثور على أقرب عنوان صفحة مطابق فعليًا
+  const searchWikiTitle = async (query: string): Promise<string | null> => {
+    try {
+      const url =
+        `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}` +
+        `&limit=1&namespace=0&format=json&origin=*`;
+      const response = await fetch(url);
+      if (!response.ok) return null;
+      const data = await response.json();
+      const title = data?.[1]?.[0];
+      return title || null;
+    } catch {
+      return null;
+    }
+  };
+
+  // دالة مجانية 100% تجلب أدق صورة ممكنة للدواء المحدّد من ويكيبيديا
+  // بترتيب أولوية: الاسم الإنجليزي كامل -> بحث عن أقرب عنوان له -> أول كلمة فقط -> بحث عن أقرب عنوان لأول كلمة
+  const fetchDrugImageFromWiki = async (drugNameEn: string): Promise<string | null> => {
+    const cleanFull = drugNameEn.trim();
+    const firstWord = cleanFull.split(' ')[0];
+
+    const attempts: (() => Promise<string | null>)[] = [
+      () => fetchSummaryImage(cleanFull),
+      async () => {
+        const title = await searchWikiTitle(cleanFull);
+        return title ? fetchSummaryImage(title) : null;
+      },
+    ];
+
+    if (firstWord && firstWord !== cleanFull) {
+      attempts.push(() => fetchSummaryImage(firstWord));
+      attempts.push(async () => {
+        const title = await searchWikiTitle(firstWord);
+        return title ? fetchSummaryImage(title) : null;
+      });
+    }
+
+    for (const attempt of attempts) {
+      try {
+        const image = await attempt();
+        if (image) return image;
+      } catch (e) {
+        console.error('Error fetching wiki image:', e);
+      }
+    }
+
+    return null;
   };
 
   const handleAiSearch = async () => {
@@ -83,7 +133,7 @@ export const AiDictionarySection: React.FC = () => {
       const raw = await askPuterAI(systemPrompt, searchTerm.trim(), true);
       const data: ExtendedClinicalResponse = JSON.parse(raw);
 
-      // جلب الصورة الحقيقية المطابقة لاسم الدواء الإنجليزي
+      // جلب الصورة الحقيقية الأدق مطابقةً لاسم الدواء الإنجليزي
       const realImage = await fetchDrugImageFromWiki(data.nameEn || searchTerm.trim());
 
       setAiResult({
