@@ -51,7 +51,59 @@ export const AiDictionarySection: React.FC = () => {
     return PACKAGING_HINTS.some((good) => t.includes(good));
   };
 
-  // يبحث في ملفات Wikimedia Commons (صور رفعها مستخدمون فعليًا، غالبًا صور واقعية للعبوات)
+  const buildQueries = (cleanFull: string, firstWord: string) => {
+    const queries = [
+      `${cleanFull} box`,
+      `${cleanFull} package`,
+      `${cleanFull} tablets box`,
+      `${cleanFull} blister pack`,
+      `${cleanFull} medicine`,
+    ];
+    if (firstWord && firstWord !== cleanFull) {
+      queries.push(`${firstWord} box`, `${firstWord} package`, `${firstWord} medicine`);
+    }
+    return queries;
+  };
+
+  // Openverse: محرك بحث صور مجاني بالكامل وبدون مفتاح API، بيجمع صور CC من Flickr وCommons ومصادر تانية كتير
+  // تغطيته لصور منتجات/عبوات حقيقية أوسع بكتير من Wikimedia Commons وحدها
+  const searchOpenverse = async (query: string): Promise<{ url: string; title: string }[]> => {
+    try {
+      const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=12`;
+      const response = await fetch(url);
+      if (!response.ok) return [];
+      const data = await response.json();
+      const results = data?.results || [];
+      return results.map((r: any) => ({
+        url: r.thumbnail || r.url,
+        title: (r.title || '') as string,
+      }));
+    } catch {
+      return [];
+    }
+  };
+
+  const fetchFromOpenverse = async (cleanFull: string, firstWord: string): Promise<string | null> => {
+    for (const query of buildQueries(cleanFull, firstWord)) {
+      try {
+        const results = await searchOpenverse(query);
+        if (results.length === 0) continue;
+        // أولوية لنتيجة عنوانها بيدل صراحة على عبوة/علبة
+        const prioritized = [...results].sort((a, b) => {
+          const aGood = isLikelyPackagingTitle(a.title) ? 1 : 0;
+          const bGood = isLikelyPackagingTitle(b.title) ? 1 : 0;
+          return bGood - aGood;
+        });
+        const best = prioritized.find((r) => !EXCLUDE_HINTS.some((bad) => r.title.toLowerCase().includes(bad)));
+        if (best?.url) return best.url;
+      } catch (e) {
+        console.error('Error searching Openverse:', e);
+      }
+    }
+    return null;
+  };
+
+  // يبحث في ملفات Wikimedia Commons كخيار احتياطي ثانٍ (صور رفعها مستخدمون فعليًا)
   const searchCommonsFiles = async (query: string): Promise<string[]> => {
     try {
       const url =
@@ -67,7 +119,6 @@ export const AiDictionarySection: React.FC = () => {
     }
   };
 
-  // يجلب رابط الصورة الفعلي (thumbnail) لملف Commons معيّن بعرض مناسب للعرض
   const fetchCommonsFileUrl = async (fileTitle: string): Promise<string | null> => {
     try {
       const url =
@@ -85,59 +136,47 @@ export const AiDictionarySection: React.FC = () => {
     }
   };
 
-  // يحاول العثور على أول ملف مطابق لصورة عبوة حقيقية ضمن نتائج بحث معينة
-  const findPackagingImageInResults = async (titles: string[]): Promise<string | null> => {
-    // أولوية للملفات اللي عنوانها بيدل صراحةً على عبوة/علبة/شريط
-    const prioritized = [...titles].sort((a, b) => {
-      const aGood = isLikelyPackagingTitle(a) ? 1 : 0;
-      const bGood = isLikelyPackagingTitle(b) ? 1 : 0;
-      return bGood - aGood;
-    });
-
-    for (const title of prioritized) {
-      const lower = title.toLowerCase();
-      if (EXCLUDE_HINTS.some((bad) => lower.includes(bad))) continue;
-      const imageUrl = await fetchCommonsFileUrl(title);
-      if (imageUrl) return imageUrl;
-    }
-    return null;
-  };
-
-  // دالة مجانية 100% تجلب صورة عبوة/علبة الدواء الفعلية (مش التركيب الكيميائي) من Wikimedia Commons
-  const fetchDrugImageFromWiki = async (drugNameEn: string): Promise<string | null> => {
-    const cleanFull = drugNameEn.trim();
-    const firstWord = cleanFull.split(' ')[0];
-
-    // نبني استعلامات بترتيب الأولوية: اسم كامل + كلمة عبوة، ثم أول كلمة + كلمة عبوة، ثم اسم عام بدون تخصيص
-    const queries = [
-      `${cleanFull} box`,
-      `${cleanFull} package`,
-      `${cleanFull} tablets box`,
-      `${cleanFull} blister pack`,
-    ];
-
-    if (firstWord && firstWord !== cleanFull) {
-      queries.push(`${firstWord} box`, `${firstWord} package`);
-    }
-
-    for (const query of queries) {
+  const fetchFromCommons = async (cleanFull: string, firstWord: string): Promise<string | null> => {
+    for (const query of buildQueries(cleanFull, firstWord)) {
       try {
         const titles = await searchCommonsFiles(query);
         if (titles.length === 0) continue;
-        const image = await findPackagingImageInResults(titles);
-        if (image) return image;
+        const prioritized = [...titles].sort((a, b) => {
+          const aGood = isLikelyPackagingTitle(a) ? 1 : 0;
+          const bGood = isLikelyPackagingTitle(b) ? 1 : 0;
+          return bGood - aGood;
+        });
+        for (const title of prioritized) {
+          if (EXCLUDE_HINTS.some((bad) => title.toLowerCase().includes(bad))) continue;
+          const imageUrl = await fetchCommonsFileUrl(title);
+          if (imageUrl) return imageUrl;
+        }
       } catch (e) {
         console.error('Error searching Commons for packaging image:', e);
       }
     }
+    return null;
+  };
 
-    // fallback أخير: أي صورة عن الدواء من Commons حتى لو مش موصوفة صراحة كعبوة، لكن نستبعد التركيب الكيميائي
+  // دالة مجانية 100% (بدون أي مفتاح API) تجلب صورة عبوة/علبة الدواء الفعلية
+  // بترتيب أولوية: Openverse (تغطية واسعة) -> Wikimedia Commons (احتياطي) -> بحث عام بدون تخصيص "عبوة"
+  const fetchDrugImageFromWiki = async (drugNameEn: string): Promise<string | null> => {
+    const cleanFull = drugNameEn.trim();
+    const firstWord = cleanFull.split(' ')[0];
+
+    const fromOpenverse = await fetchFromOpenverse(cleanFull, firstWord);
+    if (fromOpenverse) return fromOpenverse;
+
+    const fromCommons = await fetchFromCommons(cleanFull, firstWord);
+    if (fromCommons) return fromCommons;
+
+    // fallback أخير: أي نتيجة عامة عن اسم الدواء بدون كلمة "عبوة"، لكن نستبعد التركيب الكيميائي
     try {
-      const titles = await searchCommonsFiles(cleanFull || firstWord);
-      const image = await findPackagingImageInResults(titles);
-      if (image) return image;
+      const results = await searchOpenverse(cleanFull || firstWord);
+      const best = results.find((r) => !EXCLUDE_HINTS.some((bad) => r.title.toLowerCase().includes(bad)));
+      if (best?.url) return best.url;
     } catch (e) {
-      console.error('Error in fallback Commons search:', e);
+      console.error('Error in final fallback image search:', e);
     }
 
     return null;
