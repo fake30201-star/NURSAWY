@@ -4,16 +4,17 @@ import { STATIC_TERMS } from '../data/clinicalData';
 import { ClinicalQueryResponse } from '../types';
 import { askPuterAI } from '../lib/puterAi';
 
-// Interface تمديد لنوع البيانات ليشمل الصورة
-interface ClinicalQueryResponseWithImage extends ClinicalQueryResponse {
+// تمديد الواجهة لتشمل رابط الصورة أو الشكل الدوائي من Puter AI
+interface ExtendedClinicalResponse extends ClinicalQueryResponse {
   imageUrl?: string;
+  dosageForm?: string; // أمبول، شريط، مرهم، إلخ
 }
 
 export const AiDictionarySection: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [loading, setLoading] = useState(false);
-  const [aiResult, setAiResult] = useState<ClinicalQueryResponseWithImage | null>(null);
+  const [aiResult, setAiResult] = useState<ExtendedClinicalResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const categories = [
@@ -34,20 +35,6 @@ export const AiDictionarySection: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
-  // دالة جلب صورة العلاج/المرض تلقائياً عبر Wikipedia API
-  const fetchDrugImage = async (queryEn: string): Promise<string | undefined> => {
-    try {
-      const res = await fetch(
-        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(queryEn)}`
-      );
-      if (!res.ok) return undefined;
-      const data = await res.json();
-      return data.thumbnail?.source;
-    } catch {
-      return undefined;
-    }
-  };
-
   const handleAiSearch = async () => {
     if (!searchTerm.trim()) {
       setErrorMsg('يرجى كتابة اسم الدواء، المرض، أو العرض للبحث عبر الذكاء الاصطناعي.');
@@ -59,8 +46,12 @@ export const AiDictionarySection: React.FC = () => {
     setAiResult(null);
 
     try {
+      // توجيه Puter AI لإرجاع رابط صورة للشكل الدوائي أو توضيح نوع الشكل الدوائي
       const systemPrompt = `أنت المساعد الطبي والإكلينيكي التمريضي الذكي لمنصة Nursawy.
-بصفتك استشارياً في التمريض الإكلينيكي والعناية المركزة والطوارئ، قدم تقريراً طبياً وتمريضياً دقيقاً باللغة العربية عن المصطلح أو الدواء أو العرض المطلوب.
+بصفتك استشارياً في التمريض الإكلينيكي والعناية المركزة والطوارئ، قدم تقريراً طبياً وتمريضياً دقيقاً باللغة العربية عن المصطلح أو الدواء المطلوب.
+
+إذا كان الإدخال عبارة عن دواء، حدد شكله الصيدلاني (أمبول Ampoule، شريط/كبسولات Strip/Pills، مرهم/كريم Ointment/Cream، فيال Vial، أو نقط/شرب).
+ضع رابط صورة توضيحية موثوقة وعالية الجودة للشكل الدوائي أو العلبة التجارية بالـ JSON في المفتاح "imageUrl" (يمكنك استخدام روابط ويكيبيديا أو ويكيميديا أو صور الأدوية المعتمدة).
 
 رد بصيغة JSON فقط بالمفاتيح التالية بالضبط:
 {
@@ -71,19 +62,14 @@ export const AiDictionarySection: React.FC = () => {
   "symptomsAndSigns": "الأعراض والمؤشرات الإكلينيكية",
   "nursingCarePlan": ["خطوة 1", "خطوة 2"],
   "dosagesAndPrecautions": "الجرعات والمحاذير إن وُجدت",
-  "criticalAlert": "تنبيه إكلينيكي عاجل للحالات الحرجة"
+  "criticalAlert": "تنبيه إكلينيكي عاجل للحالات الحرجة",
+  "dosageForm": "الشكل الدوائي (مثل: أمبول حقن، شريط أقراص، مرهم جلدي، فيال)",
+  "imageUrl": "رابط الصورة المباشر للدواء أو الشكل الصيدلاني"
 }`;
 
       const raw = await askPuterAI(systemPrompt, searchTerm.trim(), true);
-      const data: ClinicalQueryResponse = JSON.parse(raw);
-
-      // جلب الصورة بناءً على الاسم الإنجليزي أو البحث المدخل
-      const imgUrl = await fetchDrugImage(data.nameEn || searchTerm.trim());
-
-      setAiResult({
-        ...data,
-        imageUrl: imgUrl,
-      });
+      const data: ExtendedClinicalResponse = JSON.parse(raw);
+      setAiResult(data);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'حدث خطأ أثناء الاتصال بخدمة الذكاء الاصطناعي الإكلينيكية.');
@@ -179,12 +165,12 @@ export const AiDictionarySection: React.FC = () => {
       {aiResult && (
         <div className="bg-slate-900 border-2 border-cyan-400/80 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-cyan-950/40 space-y-6 animate-in fade-in duration-300">
           
-          {/* Header with Image */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-slate-800 pb-5">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-800 pb-5">
             <div className="space-y-2 flex-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-2">
                 <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                <span>تقرير الذكاء الاصطناعي الأونلاين - {aiResult.category}</span>
+                <span>تقرير الذكاء الاصطناعي - {aiResult.category}</span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-black text-white flex flex-wrap items-center gap-3">
                 <span>{aiResult.nameAr}</span>
@@ -192,19 +178,28 @@ export const AiDictionarySection: React.FC = () => {
                   {aiResult.nameEn}
                 </span>
               </h3>
+              {aiResult.dosageForm && (
+                <div className="text-xs text-purple-300 font-semibold pt-1">
+                  الشكل الدوائي: <span className="text-cyan-300 font-bold">{aiResult.dosageForm}</span>
+                </div>
+              )}
             </div>
 
-            {/* Display Image if Available */}
+            {/* عرض صورة الدواء المباشرة المرجعة من Puter AI */}
             {aiResult.imageUrl && (
-              <div className="relative group shrink-0 w-full md:w-44 h-36 rounded-2xl overflow-hidden border border-cyan-500/30 bg-slate-950 shadow-lg">
+              <div className="relative group shrink-0 w-full sm:w-48 h-40 rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-950 shadow-xl p-2">
                 <img
                   src={aiResult.imageUrl}
                   alt={aiResult.nameAr}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 rounded-xl"
+                  onError={(e) => {
+                    // إخفاء برواز الصورة إذا كان الرابط غير صالح
+                    (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
+                  }}
                 />
-                <div className="absolute bottom-2 right-2 bg-slate-950/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] text-cyan-300 flex items-center gap-1 border border-cyan-500/20">
-                  <ImageIcon className="w-3 h-3" />
-                  <span>صورة توضيحية</span>
+                <div className="absolute bottom-2 right-2 bg-slate-950/90 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-cyan-300 flex items-center gap-1 border border-cyan-500/30">
+                  <ImageIcon className="w-3 h-3 text-cyan-400" />
+                  <span>صورة الشكل الدوائي</span>
                 </div>
               </div>
             )}
@@ -319,3 +314,4 @@ export const AiDictionarySection: React.FC = () => {
     </div>
   );
 };
+
