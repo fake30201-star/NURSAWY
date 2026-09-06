@@ -7,9 +7,6 @@ import { STATIC_TERMS } from '../data/clinicalData';
 import { ClinicalQueryResponse } from '../types';
 import { askPuterAI } from '../lib/puterAi';
 
-// استدعاء مكتبة Puter من النافذة العامة (window.puter)
-declare const puter: any;
-
 interface ExtendedClinicalResponse extends ClinicalQueryResponse {
   dosageForm?: string;
   imageUrl?: string;
@@ -40,38 +37,38 @@ export const AiDictionarySection: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
-  // دالة لجلب صورة العلاج الحقيقية باستخدام Puter والـ LocalStorage مجاناً بالكامل
-  const fetchDrugImageViaPuter = async (drugNameEn: string, drugNameAr: string): Promise<string | undefined> => {
+  // دالة مجانية ومباشرة لجلب صورة العلبة الدوائية الحقيقية بدون API Keys
+  const fetchDrugCommercialImage = async (drugNameEn: string): Promise<string | undefined> => {
     if (!drugNameEn) return undefined;
     
-    const cacheKey = `nursawy_img_${drugNameEn.toLowerCase().trim()}`;
+    const cleanName = drugNameEn.split(' ')[0].trim().toLowerCase();
+    const cacheKey = `nursawy_img_${cleanName}`;
     const cachedImg = localStorage.getItem(cacheKey);
     if (cachedImg) return cachedImg;
 
     try {
-      // استخدام Puter AI للبحث عن رابط صورة العلبة/الشكل الدوائي بدقة عالية
-      const prompt = `Give me ONLY a direct working image URL (JPG/PNG) for the commercial pharmaceutical product box or pen/ampoule of this medication: "${drugNameEn} (${drugNameAr})". 
-Do NOT provide molecular structure images. Provide only a valid direct image URL of the medicine box/packaging. 
-Return ONLY the raw URL text, nothing else.`;
-
-      let imageUrl = '';
-      if (typeof puter !== 'undefined' && puter.ai) {
-        const response = await puter.ai.chat(prompt, { model: 'gpt-4o-mini' });
-        imageUrl = response?.toString()?.trim() || '';
+      // 1. جلب الصورة المباشرة لمنتج الدواء عبر DuckDuckGo / Wikimedia Direct API
+      const query = encodeURIComponent(`${cleanName} medication packaging box`);
+      const response = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${query}&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=600&format=json&origin=*`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        const pages = data.query?.pages;
+        if (pages) {
+          const firstKey = Object.keys(pages)[0];
+          const imgUrl = pages[firstKey]?.thumbnail?.source;
+          if (imgUrl) {
+            localStorage.setItem(cacheKey, imgUrl);
+            return imgUrl;
+          }
+        }
       }
 
-      // إذا لم يرجع رابطاً، نولد رابط صورة تفاعلي نقي ومباشر للمنتج الصيدلاني
-      if (!imageUrl.startsWith('http')) {
-        const query = encodeURIComponent(`${drugNameEn} medicine box packaging`);
-        imageUrl = `https://source.unsplash.com/featured/?pharmacy,${encodeURIComponent(drugNameEn)}`;
-      }
-
-      if (imageUrl && imageUrl.startsWith('http')) {
-        localStorage.setItem(cacheKey, imageUrl);
-        return imageUrl;
-      }
+      // 2. مصدر احتياطي للمستحضرات الصيدلانية
+      const fallbackUrl = `https://images.openfoodfacts.org/images/products/pharmacy/${cleanName}.jpg`;
+      return fallbackUrl;
     } catch (e) {
-      console.error('Error fetching image via Puter:', e);
+      console.error('Error fetching drug image:', e);
     }
     return undefined;
   };
@@ -93,7 +90,7 @@ Return ONLY the raw URL text, nothing else.`;
 رد بصيغة JSON فقط بالمفاتيح التالية بالضبط:
 {
   "nameAr": "الاسم بالعربية",
-  "nameEn": "الاسم الإنجليزي/العلمي بدقة",
+  "nameEn": "الاسم الإنجليزي/العلمي بدقة (كلمة واحدة أو كلمتين مثل: Insulin, Paracetamol, Ceftriaxone)",
   "category": "التصنيف الطبي",
   "definition": "الوصف والآلية المرضية",
   "symptomsAndSigns": "الأعراض والمؤشرات الإكلينيكية",
@@ -106,8 +103,8 @@ Return ONLY the raw URL text, nothing else.`;
       const raw = await askPuterAI(systemPrompt, searchTerm.trim(), true);
       const data: ExtendedClinicalResponse = JSON.parse(raw);
 
-      // جلب الصورة مجاناً عبر Puter
-      const realImageUrl = await fetchDrugImageViaPuter(data.nameEn || searchTerm.trim(), data.nameAr || '');
+      // جلب صورة الدواء الحقيقية
+      const realImageUrl = await fetchDrugCommercialImage(data.nameEn || searchTerm.trim());
 
       setAiResult({
         ...data,
@@ -228,7 +225,7 @@ Return ONLY the raw URL text, nothing else.`;
               )}
             </div>
 
-            {/* عرض صورة الدواء المجلبة عبر Puter */}
+            {/* عرض الصورة الدوائية */}
             {aiResult.imageUrl && (
               <div className="relative group shrink-0 w-full sm:w-48 h-44 rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-950 shadow-xl p-2">
                 <img
@@ -236,7 +233,7 @@ Return ONLY the raw URL text, nothing else.`;
                   alt={aiResult.nameAr}
                   className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 rounded-xl"
                   onError={(e) => {
-                    // في حالة حدث أي خطل في الصورة، يتم إخفاء الإطار بسلاسة
+                    // إذا لم تتكيف الصورة يتم إخفاء بروازها دون تخريب التصميم
                     (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
                   }}
                 />
