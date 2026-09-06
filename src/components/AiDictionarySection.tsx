@@ -4,10 +4,9 @@ import { STATIC_TERMS } from '../data/clinicalData';
 import { ClinicalQueryResponse } from '../types';
 import { askPuterAI } from '../lib/puterAi';
 
-// تمديد الواجهة لتشمل رابط الصورة أو الشكل الدوائي من Puter AI
 interface ExtendedClinicalResponse extends ClinicalQueryResponse {
+  dosageForm?: string;
   imageUrl?: string;
-  dosageForm?: string; // أمبول، شريط، مرهم، إلخ
 }
 
 export const AiDictionarySection: React.FC = () => {
@@ -35,6 +34,26 @@ export const AiDictionarySection: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
+  // دالة برمجة مضمونة لجلب صورة حقيقية بناءً على الاسم العلمي/الإنجليزي للدواء
+  const fetchDrugImage = async (drugNameEn: string): Promise<string | undefined> => {
+    if (!drugNameEn) return undefined;
+    try {
+      // تنظيف الاسم للحصول على الكلمة الأساسية للدواء
+      const cleanName = drugNameEn.split(' ')[0].trim();
+      const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanName)}`);
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.thumbnail?.source) {
+          return data.thumbnail.source;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch image:', e);
+    }
+    return undefined;
+  };
+
   const handleAiSearch = async () => {
     if (!searchTerm.trim()) {
       setErrorMsg('يرجى كتابة اسم الدواء، المرض، أو العرض للبحث عبر الذكاء الاصطناعي.');
@@ -46,30 +65,32 @@ export const AiDictionarySection: React.FC = () => {
     setAiResult(null);
 
     try {
-      // توجيه Puter AI لإرجاع رابط صورة للشكل الدوائي أو توضيح نوع الشكل الدوائي
       const systemPrompt = `أنت المساعد الطبي والإكلينيكي التمريضي الذكي لمنصة Nursawy.
 بصفتك استشارياً في التمريض الإكلينيكي والعناية المركزة والطوارئ، قدم تقريراً طبياً وتمريضياً دقيقاً باللغة العربية عن المصطلح أو الدواء المطلوب.
-
-إذا كان الإدخال عبارة عن دواء، حدد شكله الصيدلاني (أمبول Ampoule، شريط/كبسولات Strip/Pills، مرهم/كريم Ointment/Cream، فيال Vial، أو نقط/شرب).
-ضع رابط صورة توضيحية موثوقة وعالية الجودة للشكل الدوائي أو العلبة التجارية بالـ JSON في المفتاح "imageUrl" (يمكنك استخدام روابط ويكيبيديا أو ويكيميديا أو صور الأدوية المعتمدة).
 
 رد بصيغة JSON فقط بالمفاتيح التالية بالضبط:
 {
   "nameAr": "الاسم بالعربية",
-  "nameEn": "الاسم الإنجليزي/العلمي",
+  "nameEn": "الاسم الإنجليزي/العلمي بدقة (كلمة أو كلمتين فقط مثل Insulin, Paracetamol, Ceftriaxone)",
   "category": "التصنيف الطبي",
   "definition": "الوصف والآلية المرضية",
   "symptomsAndSigns": "الأعراض والمؤشرات الإكلينيكية",
   "nursingCarePlan": ["خطوة 1", "خطوة 2"],
   "dosagesAndPrecautions": "الجرعات والمحاذير إن وُجدت",
   "criticalAlert": "تنبيه إكلينيكي عاجل للحالات الحرجة",
-  "dosageForm": "الشكل الدوائي (مثل: أمبول حقن، شريط أقراص، مرهم جلدي، فيال)",
-  "imageUrl": "رابط الصورة المباشر للدواء أو الشكل الصيدلاني"
+  "dosageForm": "الشكل الدوائي (مثل: أمبول حقن، أقراص، مرهم)"
 }`;
 
       const raw = await askPuterAI(systemPrompt, searchTerm.trim(), true);
       const data: ExtendedClinicalResponse = JSON.parse(raw);
-      setAiResult(data);
+
+      // جلب صورة الدواء الحقيقية عبر Wikipedia REST API
+      const realImageUrl = await fetchDrugImage(data.nameEn || searchTerm.trim());
+
+      setAiResult({
+        ...data,
+        imageUrl: realImageUrl,
+      });
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'حدث خطأ أثناء الاتصال بخدمة الذكاء الاصطناعي الإكلينيكية.');
@@ -165,7 +186,7 @@ export const AiDictionarySection: React.FC = () => {
       {aiResult && (
         <div className="bg-slate-900 border-2 border-cyan-400/80 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-cyan-950/40 space-y-6 animate-in fade-in duration-300">
           
-          {/* Header */}
+          {/* Header & Image */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-800 pb-5">
             <div className="space-y-2 flex-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-2">
@@ -185,21 +206,17 @@ export const AiDictionarySection: React.FC = () => {
               )}
             </div>
 
-            {/* عرض صورة الدواء المباشرة المرجعة من Puter AI */}
+            {/* عرض صورة العلاج الحقيقية */}
             {aiResult.imageUrl && (
-              <div className="relative group shrink-0 w-full sm:w-48 h-40 rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-950 shadow-xl p-2">
+              <div className="relative group shrink-0 w-full sm:w-44 h-40 rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-950 shadow-xl p-2">
                 <img
                   src={aiResult.imageUrl}
                   alt={aiResult.nameAr}
                   className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 rounded-xl"
-                  onError={(e) => {
-                    // إخفاء برواز الصورة إذا كان الرابط غير صالح
-                    (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
-                  }}
                 />
                 <div className="absolute bottom-2 right-2 bg-slate-950/90 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-cyan-300 flex items-center gap-1 border border-cyan-500/30">
                   <ImageIcon className="w-3 h-3 text-cyan-400" />
-                  <span>صورة الشكل الدوائي</span>
+                  <span>صورة العلاج</span>
                 </div>
               </div>
             )}
