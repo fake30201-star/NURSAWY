@@ -7,6 +7,9 @@ import { STATIC_TERMS } from '../data/clinicalData';
 import { ClinicalQueryResponse } from '../types';
 import { askPuterAI } from '../lib/puterAi';
 
+// التعريف بـ Puter المدمج في المشروع
+declare const puter: any;
+
 interface ExtendedClinicalResponse extends ClinicalQueryResponse {
   dosageForm?: string;
   imageUrl?: string;
@@ -37,38 +40,30 @@ export const AiDictionarySection: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
-  // دالة مجانية ومباشرة لجلب صورة العلبة الدوائية الحقيقية بدون API Keys
-  const fetchDrugCommercialImage = async (drugNameEn: string): Promise<string | undefined> => {
+  // دالة توليد وبناء صورة العلاج باستخدام Puter AI مباشرة ودون أي تكلفة
+  const generateDrugImageWithPuter = async (drugNameEn: string, dosageForm?: string): Promise<string | undefined> => {
     if (!drugNameEn) return undefined;
-    
-    const cleanName = drugNameEn.split(' ')[0].trim().toLowerCase();
-    const cacheKey = `nursawy_img_${cleanName}`;
+
+    const cacheKey = `nursawy_gen_img_${drugNameEn.toLowerCase().trim()}`;
     const cachedImg = localStorage.getItem(cacheKey);
     if (cachedImg) return cachedImg;
 
     try {
-      // 1. جلب الصورة المباشرة لمنتج الدواء عبر DuckDuckGo / Wikimedia Direct API
-      const query = encodeURIComponent(`${cleanName} medication packaging box`);
-      const response = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${query}&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=600&format=json&origin=*`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        const pages = data.query?.pages;
-        if (pages) {
-          const firstKey = Object.keys(pages)[0];
-          const imgUrl = pages[firstKey]?.thumbnail?.source;
-          if (imgUrl) {
-            localStorage.setItem(cacheKey, imgUrl);
-            return imgUrl;
-          }
+      if (typeof puter !== 'undefined' && puter.ai && puter.ai.txt2img) {
+        // تصميم البرومبت لتوليد علبة أو شكل دوائي عالي الدقة
+        const imagePrompt = `A high quality 3D realistic studio photograph of a pharmaceutical medical box and packaging for "${drugNameEn}", medication form: ${dosageForm || 'medicine box'}, medical clinical style, clean dark background, medical lighting, HD.`;
+
+        // توليد الصورة عبر Puter AI
+        const imgElement = await puter.ai.txt2img(imagePrompt);
+        const generatedSrc = imgElement?.src || imgElement;
+
+        if (generatedSrc && typeof generatedSrc === 'string') {
+          localStorage.setItem(cacheKey, generatedSrc);
+          return generatedSrc;
         }
       }
-
-      // 2. مصدر احتياطي للمستحضرات الصيدلانية
-      const fallbackUrl = `https://images.openfoodfacts.org/images/products/pharmacy/${cleanName}.jpg`;
-      return fallbackUrl;
     } catch (e) {
-      console.error('Error fetching drug image:', e);
+      console.error('Error generating image via Puter AI:', e);
     }
     return undefined;
   };
@@ -90,7 +85,7 @@ export const AiDictionarySection: React.FC = () => {
 رد بصيغة JSON فقط بالمفاتيح التالية بالضبط:
 {
   "nameAr": "الاسم بالعربية",
-  "nameEn": "الاسم الإنجليزي/العلمي بدقة (كلمة واحدة أو كلمتين مثل: Insulin, Paracetamol, Ceftriaxone)",
+  "nameEn": "الاسم الإنجليزي/العلمي بدقة",
   "category": "التصنيف الطبي",
   "definition": "الوصف والآلية المرضية",
   "symptomsAndSigns": "الأعراض والمؤشرات الإكلينيكية",
@@ -103,12 +98,12 @@ export const AiDictionarySection: React.FC = () => {
       const raw = await askPuterAI(systemPrompt, searchTerm.trim(), true);
       const data: ExtendedClinicalResponse = JSON.parse(raw);
 
-      // جلب صورة الدواء الحقيقية
-      const realImageUrl = await fetchDrugCommercialImage(data.nameEn || searchTerm.trim());
+      // توليد الصورة عبر Puter AI مجاناً
+      const generatedImgUrl = await generateDrugImageWithPuter(data.nameEn || searchTerm.trim(), data.dosageForm);
 
       setAiResult({
         ...data,
-        imageUrl: realImageUrl,
+        imageUrl: generatedImgUrl,
       });
     } catch (err: any) {
       console.error(err);
@@ -163,7 +158,7 @@ export const AiDictionarySection: React.FC = () => {
             {loading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>جاري التحليل...</span>
+                <span>جاري التحليل والتوليد...</span>
               </>
             ) : (
               <>
@@ -205,7 +200,7 @@ export const AiDictionarySection: React.FC = () => {
       {aiResult && (
         <div className="bg-slate-900 border-2 border-cyan-400/80 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-cyan-950/40 space-y-6 animate-in fade-in duration-300">
           
-          {/* Header & Image */}
+          {/* Header & Generated Image */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-800 pb-5">
             <div className="space-y-2 flex-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-2">
@@ -225,21 +220,20 @@ export const AiDictionarySection: React.FC = () => {
               )}
             </div>
 
-            {/* عرض الصورة الدوائية */}
+            {/* عرض الصورة المنشأة بواسطة Puter AI */}
             {aiResult.imageUrl && (
-              <div className="relative group shrink-0 w-full sm:w-48 h-44 rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-950 shadow-xl p-2">
+              <div className="relative group shrink-0 w-full sm:w-48 h-44 rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-950 shadow-xl p-1">
                 <img
                   src={aiResult.imageUrl}
                   alt={aiResult.nameAr}
-                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 rounded-xl"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 rounded-xl"
                   onError={(e) => {
-                    // إذا لم تتكيف الصورة يتم إخفاء بروازها دون تخريب التصميم
                     (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
                   }}
                 />
                 <div className="absolute bottom-2 right-2 bg-slate-950/90 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-cyan-300 flex items-center gap-1 border border-cyan-500/30">
                   <ImageIcon className="w-3 h-3 text-cyan-400" />
-                  <span>صورة العلاج</span>
+                  <span>توليد Puter AI</span>
                 </div>
               </div>
             )}
@@ -254,7 +248,7 @@ export const AiDictionarySection: React.FC = () => {
             <p className="text-slate-200 text-sm leading-relaxed">{aiResult.definition}</p>
           </div>
 
-          {/* Symptoms & Signs if present */}
+          {/* Symptoms & Signs */}
           {aiResult.symptomsAndSigns && (
             <div className="space-y-2 bg-slate-950/70 p-4 sm:p-5 rounded-2xl border border-slate-800">
               <h4 className="text-sm font-bold text-purple-400 flex items-center gap-2">
@@ -265,7 +259,7 @@ export const AiDictionarySection: React.FC = () => {
             </div>
           )}
 
-          {/* Nursing Care Plan Checklist */}
+          {/* Nursing Care Plan */}
           {aiResult.nursingCarePlan && aiResult.nursingCarePlan.length > 0 && (
             <div className="space-y-3 bg-purple-950/20 border border-purple-500/30 p-5 rounded-2xl">
               <h4 className="text-sm font-extrabold text-purple-300 flex items-center gap-2">
@@ -285,7 +279,7 @@ export const AiDictionarySection: React.FC = () => {
             </div>
           )}
 
-          {/* Dosages & Precautions if present */}
+          {/* Dosages & Precautions */}
           {aiResult.dosagesAndPrecautions && (
             <div className="space-y-2 bg-slate-950/70 p-4 sm:p-5 rounded-2xl border border-slate-800">
               <h4 className="text-sm font-bold text-amber-400 flex items-center gap-2">
