@@ -37,11 +37,20 @@ export const AiDictionarySection: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
-  // دالة جلب صورة المنتج/العلبة الدوائية مجاناً وبدقة عالية
-  const getDrugProductImageUrl = (drugNameEn: string): string => {
-    const cleanName = encodeURIComponent(drugNameEn.trim().toLowerCase());
-    // استدعاء صورة حقيقية بدقة عالية متناسبة مع نوع الدواء
-    return `https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=600&q=80`;
+  // دالة مجانية 100% تجلب الصورة الحقيقية والمطابقة للدواء المحدّد من ويكيبيديا
+  const fetchDrugImageFromWiki = async (drugNameEn: string): Promise<string | null> => {
+    try {
+      const cleanName = drugNameEn.trim().split(' ')[0];
+      const response = await fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanName)}`
+      );
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.thumbnail?.source || data.originalimage?.source || null;
+    } catch (e) {
+      console.error('Error fetching wiki image:', e);
+      return null;
+    }
   };
 
   const handleAiSearch = async () => {
@@ -68,18 +77,18 @@ export const AiDictionarySection: React.FC = () => {
   "nursingCarePlan": ["خطوة 1", "خطوة 2"],
   "dosagesAndPrecautions": "الجرعات والمحاذير إن وُجدت",
   "criticalAlert": "تنبيه إكلينيكي عاجل للحالات الحرجة",
-  "dosageForm": "الشكل الدوائي (مثل: حقن تحت الجلد / قلم انسولين / أقراص / أمبول)"
+  "dosageForm": "الشكل الدوائي (حقن / قلم انسولين / أقراص / أمبول)"
 }`;
 
       const raw = await askPuterAI(systemPrompt, searchTerm.trim(), true);
       const data: ExtendedClinicalResponse = JSON.parse(raw);
 
-      // ربط صورة العلبة الدوائية بالنتيجة
-      const realProductImage = getDrugProductImageUrl(data.nameEn || searchTerm.trim());
+      // جلب الصورة الحقيقية المطابقة لاسم الدواء الإنجليزي
+      const realImage = await fetchDrugImageFromWiki(data.nameEn || searchTerm.trim());
 
       setAiResult({
         ...data,
-        imageUrl: realProductImage,
+        imageUrl: realImage || undefined,
       });
     } catch (err: any) {
       console.error(err);
@@ -107,7 +116,7 @@ export const AiDictionarySection: React.FC = () => {
           القاموس والتشخيص السريري الأونلاين
         </h2>
         <p className="text-slate-400 text-sm">
-          ابحث عن أي مصطلح، دواء، عرض، أو تحليل للوصول الفوري لتقرير تمريضي شامل وصورة العلاج.
+          ابحث عن أي مصطلح، دواء، عرض، أو تحليل للوصول الفوري لتقرير تمريضي شامل وصورة العلاج الأصلية.
         </p>
       </div>
 
@@ -176,7 +185,7 @@ export const AiDictionarySection: React.FC = () => {
       {aiResult && (
         <div className="bg-slate-900 border-2 border-cyan-400/80 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-cyan-950/40 space-y-6 animate-in fade-in duration-300">
           
-          {/* Header & Medicine Box Photo */}
+          {/* Header & Exact Medicine Photo */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-800 pb-5">
             <div className="space-y-2 flex-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-2">
@@ -191,18 +200,23 @@ export const AiDictionarySection: React.FC = () => {
               </h3>
             </div>
 
-            {/* عرض صورة العلبة الدوائية الحقيقية */}
-            {aiResult.imageUrl && (
-              <div className="relative group shrink-0 w-full sm:w-52 h-40 rounded-2xl overflow-hidden border-2 border-purple-500/40 bg-slate-950 shadow-xl p-1">
+            {/* عرض الصورة الحقيقية المطابقة المجلوبة فورياً */}
+            {aiResult.imageUrl ? (
+              <div className="relative group shrink-0 w-full sm:w-52 h-44 rounded-2xl overflow-hidden border-2 border-cyan-400/50 bg-slate-950 p-1 shadow-xl">
                 <img
                   src={aiResult.imageUrl}
                   alt={aiResult.nameAr}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 rounded-xl"
+                  className="w-full h-full object-contain bg-white/5 rounded-xl group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute bottom-2 right-2 bg-slate-950/90 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-cyan-300 flex items-center gap-1 border border-cyan-500/30">
                   <ImageIcon className="w-3 h-3 text-cyan-400" />
-                  <span>صورة المنتج الدوائي</span>
+                  <span>صورة العلاج الأصلية</span>
                 </div>
+              </div>
+            ) : (
+              <div className="shrink-0 w-full sm:w-48 h-32 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col items-center justify-center gap-2 p-3 text-slate-500">
+                <Pill className="w-8 h-8 text-slate-600" />
+                <span className="text-xs text-center font-medium">الشكل الدوائي: {aiResult.dosageForm || 'غير محدد'}</span>
               </div>
             )}
           </div>
@@ -320,3 +334,4 @@ export const AiDictionarySection: React.FC = () => {
     </div>
   );
 };
+
