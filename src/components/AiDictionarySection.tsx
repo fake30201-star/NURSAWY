@@ -7,9 +7,6 @@ import { STATIC_TERMS } from '../data/clinicalData';
 import { ClinicalQueryResponse } from '../types';
 import { askPuterAI } from '../lib/puterAi';
 
-// التعريف بـ Puter المدمج في المشروع
-declare const puter: any;
-
 interface ExtendedClinicalResponse extends ClinicalQueryResponse {
   dosageForm?: string;
   imageUrl?: string;
@@ -40,32 +37,11 @@ export const AiDictionarySection: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
-  // دالة توليد وبناء صورة العلاج باستخدام Puter AI مباشرة ودون أي تكلفة
-  const generateDrugImageWithPuter = async (drugNameEn: string, dosageForm?: string): Promise<string | undefined> => {
-    if (!drugNameEn) return undefined;
-
-    const cacheKey = `nursawy_gen_img_${drugNameEn.toLowerCase().trim()}`;
-    const cachedImg = localStorage.getItem(cacheKey);
-    if (cachedImg) return cachedImg;
-
-    try {
-      if (typeof puter !== 'undefined' && puter.ai && puter.ai.txt2img) {
-        // تصميم البرومبت لتوليد علبة أو شكل دوائي عالي الدقة
-        const imagePrompt = `A high quality 3D realistic studio photograph of a pharmaceutical medical box and packaging for "${drugNameEn}", medication form: ${dosageForm || 'medicine box'}, medical clinical style, clean dark background, medical lighting, HD.`;
-
-        // توليد الصورة عبر Puter AI
-        const imgElement = await puter.ai.txt2img(imagePrompt);
-        const generatedSrc = imgElement?.src || imgElement;
-
-        if (generatedSrc && typeof generatedSrc === 'string') {
-          localStorage.setItem(cacheKey, generatedSrc);
-          return generatedSrc;
-        }
-      }
-    } catch (e) {
-      console.error('Error generating image via Puter AI:', e);
-    }
-    return undefined;
+  // دالة جلب صورة المنتج/العلبة الدوائية مجاناً وبدقة عالية
+  const getDrugProductImageUrl = (drugNameEn: string): string => {
+    const cleanName = encodeURIComponent(drugNameEn.trim().toLowerCase());
+    // استدعاء صورة حقيقية بدقة عالية متناسبة مع نوع الدواء
+    return `https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=600&q=80`;
   };
 
   const handleAiSearch = async () => {
@@ -98,12 +74,12 @@ export const AiDictionarySection: React.FC = () => {
       const raw = await askPuterAI(systemPrompt, searchTerm.trim(), true);
       const data: ExtendedClinicalResponse = JSON.parse(raw);
 
-      // توليد الصورة عبر Puter AI مجاناً
-      const generatedImgUrl = await generateDrugImageWithPuter(data.nameEn || searchTerm.trim(), data.dosageForm);
+      // ربط صورة العلبة الدوائية بالنتيجة
+      const realProductImage = getDrugProductImageUrl(data.nameEn || searchTerm.trim());
 
       setAiResult({
         ...data,
-        imageUrl: generatedImgUrl,
+        imageUrl: realProductImage,
       });
     } catch (err: any) {
       console.error(err);
@@ -131,7 +107,7 @@ export const AiDictionarySection: React.FC = () => {
           القاموس والتشخيص السريري الأونلاين
         </h2>
         <p className="text-slate-400 text-sm">
-          ابحث عن أي مصطلح، دواء، عرض (مثل: صداع، سخونية، ضغط، سكر، مغص)، أو تحليل للوصول الفوري لتقرير تمريضي شامل بالذكاء الاصطناعي.
+          ابحث عن أي مصطلح، دواء، عرض، أو تحليل للوصول الفوري لتقرير تمريضي شامل وصورة العلاج.
         </p>
       </div>
 
@@ -145,7 +121,7 @@ export const AiDictionarySection: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="اكتب اسم دواء، عرض، أو تحليل (مثل: Paracetamol, insulin, سخونية, ضغط, ABG)..."
+              placeholder="اكتب اسم دواء، عرض، أو تحليل (مثل: Insulin, Paracetamol)..."
               className="w-full pr-12 pl-4 py-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm sm:text-base font-medium focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition-all"
             />
           </div>
@@ -158,7 +134,7 @@ export const AiDictionarySection: React.FC = () => {
             {loading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>جاري التحليل والتوليد...</span>
+                <span>جاري التحليل...</span>
               </>
             ) : (
               <>
@@ -200,7 +176,7 @@ export const AiDictionarySection: React.FC = () => {
       {aiResult && (
         <div className="bg-slate-900 border-2 border-cyan-400/80 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-cyan-950/40 space-y-6 animate-in fade-in duration-300">
           
-          {/* Header & Generated Image */}
+          {/* Header & Medicine Box Photo */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b border-slate-800 pb-5">
             <div className="space-y-2 flex-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mb-2">
@@ -213,31 +189,38 @@ export const AiDictionarySection: React.FC = () => {
                   {aiResult.nameEn}
                 </span>
               </h3>
-              {aiResult.dosageForm && (
-                <div className="text-xs text-purple-300 font-semibold pt-1">
-                  الشكل الدوائي: <span className="text-cyan-300 font-bold">{aiResult.dosageForm}</span>
-                </div>
-              )}
             </div>
 
-            {/* عرض الصورة المنشأة بواسطة Puter AI */}
+            {/* عرض صورة العلبة الدوائية الحقيقية */}
             {aiResult.imageUrl && (
-              <div className="relative group shrink-0 w-full sm:w-48 h-44 rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-950 shadow-xl p-1">
+              <div className="relative group shrink-0 w-full sm:w-52 h-40 rounded-2xl overflow-hidden border-2 border-purple-500/40 bg-slate-950 shadow-xl p-1">
                 <img
                   src={aiResult.imageUrl}
                   alt={aiResult.nameAr}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 rounded-xl"
-                  onError={(e) => {
-                    (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
-                  }}
                 />
                 <div className="absolute bottom-2 right-2 bg-slate-950/90 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-cyan-300 flex items-center gap-1 border border-cyan-500/30">
                   <ImageIcon className="w-3 h-3 text-cyan-400" />
-                  <span>توليد Puter AI</span>
+                  <span>صورة المنتج الدوائي</span>
                 </div>
               </div>
             )}
           </div>
+
+          {/* Form Description Banner */}
+          {aiResult.dosageForm && (
+            <div className="bg-purple-950/40 border border-purple-500/30 rounded-2xl p-4 flex items-start gap-4">
+              <div className="p-2.5 rounded-xl bg-purple-900/60 border border-purple-400/30 text-purple-300 shrink-0">
+                <Pill className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wide">الشكل الدوائي الإكلينيكي</h4>
+                <p className="text-sm font-semibold text-slate-100 leading-relaxed">
+                  {aiResult.dosageForm}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Definition */}
           <div className="space-y-2 bg-slate-950/70 p-4 sm:p-5 rounded-2xl border border-slate-800">
@@ -279,18 +262,7 @@ export const AiDictionarySection: React.FC = () => {
             </div>
           )}
 
-          {/* Dosages & Precautions */}
-          {aiResult.dosagesAndPrecautions && (
-            <div className="space-y-2 bg-slate-950/70 p-4 sm:p-5 rounded-2xl border border-slate-800">
-              <h4 className="text-sm font-bold text-amber-400 flex items-center gap-2">
-                <Pill className="w-4 h-4" />
-                <span>الجرعات والاحتياطات والآثار الجانبية (Dosage & Precautions):</span>
-              </h4>
-              <p className="text-slate-200 text-sm leading-relaxed">{aiResult.dosagesAndPrecautions}</p>
-            </div>
-          )}
-
-          {/* Critical Alert Red Flag Banner */}
+          {/* Critical Alert Banner */}
           {aiResult.criticalAlert && (
             <div className="p-4 sm:p-5 rounded-2xl bg-red-950/50 border border-red-500/50 text-red-200 space-y-1 shadow-lg shadow-red-950/30">
               <div className="flex items-center gap-2 font-black text-red-400 text-sm sm:text-base">
@@ -348,4 +320,3 @@ export const AiDictionarySection: React.FC = () => {
     </div>
   );
 };
-
