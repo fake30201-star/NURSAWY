@@ -456,9 +456,11 @@ const PatientOrderCard: React.FC<{
 
       {order.request_text && <p className="text-xs text-slate-300">{order.request_text}</p>}
       {order.prescription_url && (
-        <a href={order.prescription_url} target="_blank" rel="noreferrer" className="text-[11px] text-cyan-300 underline">
-          عرض صورة الروشتة المرفوعة
-        </a>
+        <PrescriptionLink
+          value={order.prescription_url}
+          label="عرض صورة الروشتة المرفوعة"
+          className="text-[11px] text-cyan-300 underline cursor-pointer"
+        />
       )}
 
       {order.price != null && (
