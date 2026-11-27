@@ -1,3 +1,4 @@
+import { PrescriptionLink } from './PrescriptionLink';
 import React, { useEffect, useState } from 'react';
 import {
   Store,
