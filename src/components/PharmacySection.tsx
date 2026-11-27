@@ -114,7 +114,7 @@ export const PharmacySection: React.FC = () => {
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('public_pharmacies')
         .select('id, full_name, pharmacy_name, pharmacy_phone, pharmacy_address, pharmacy_lat, pharmacy_lng')
         .eq('role', 'pharmacy')
         .not('pharmacy_lat', 'is', null);
