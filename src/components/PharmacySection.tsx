@@ -1,3 +1,4 @@
+import { PrescriptionLink } from './PrescriptionLink';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   MapPin,
@@ -219,11 +220,11 @@ export const PharmacySection: React.FC = () => {
           throw new Error(
             'تعذر رفع صورة الروشتة: ' +
               uploadError.message +
-              ' — تأكد إن Storage bucket اسمه "prescriptions" اتعمل في Supabase Dashboard وإنه Public.'
+              ' — تأكد إن Storage bucket اسمه "prescriptions" موجود وإن سياسات الرفع متفعلة.'
           );
         }
-        const { data: urlData } = supabase.storage.from('prescriptions').getPublicUrl(filePath);
-        prescriptionUrl = urlData.publicUrl;
+        // نخزن المسار فقط (مش رابط عام). العرض بيتم برابط مؤقت (signed URL).
+        prescriptionUrl = filePath;
       }
 
       const rows = Array.from(selected).map((pharmacyId) => ({
@@ -455,9 +456,11 @@ const PatientOrderCard: React.FC<{
 
       {order.request_text && <p className="text-xs text-slate-300">{order.request_text}</p>}
       {order.prescription_url && (
-        <a href={order.prescription_url} target="_blank" rel="noreferrer" className="text-[11px] text-cyan-300 underline">
-          عرض صورة الروشتة المرفوعة
-        </a>
+        <PrescriptionLink
+          value={order.prescription_url}
+          label="عرض صورة الروشتة المرفوعة"
+          className="text-[11px] text-cyan-300 underline cursor-pointer"
+        />
       )}
 
       {order.price != null && (

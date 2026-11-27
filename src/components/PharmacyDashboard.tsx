@@ -1,3 +1,4 @@
+import { PrescriptionLink } from './PrescriptionLink';
 import React, { useEffect, useState } from 'react';
 import {
   Store,
@@ -268,9 +269,11 @@ const PharmacyOrderCard: React.FC<{
 
       {order.request_text && <p className="text-sm text-slate-200">{order.request_text}</p>}
       {order.prescription_url && (
-        <a href={order.prescription_url} target="_blank" rel="noreferrer" className="text-[11px] text-cyan-300 underline">
-          عرض صورة الروشتة
-        </a>
+        <PrescriptionLink
+          value={order.prescription_url}
+          label="عرض صورة الروشتة"
+          className="text-[11px] text-cyan-300 underline cursor-pointer"
+        />
       )}
       {(order.patient_address || hasLocation) && (
         <div className="space-y-2">
